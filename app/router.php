@@ -1272,8 +1272,8 @@ function handle_post(string $route, array $user): void
             if (isset($_FILES['sql_file']) && $_FILES['sql_file']['error'] === UPLOAD_ERR_OK) {
                 $sql = file_get_contents($_FILES['sql_file']['tmp_name']);
                 if ($sql) {
-                    // إزالة الكلمات غير المدعومة في MySQL 8+ والتي كانت تسبب الخطأ 1064
-                    $sql = str_ireplace(['DEFAULT CURRENT_DATE', 'DEFAULT curdate()'], '', $sql);
+                    // إزالة الكلمات غير المدعومة في MySQL 8+ باستخدام regex لضمان التقاط كل المسافات
+                    $sql = preg_replace('/DEFAULT\s+(CURRENT_DATE|curdate\(\))/i', '', $sql);
                     
                     $db = pdo(true);
                     $db->exec('SET FOREIGN_KEY_CHECKS=0');
