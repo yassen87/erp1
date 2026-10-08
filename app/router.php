@@ -1276,7 +1276,9 @@ function handle_post(string $route, array $user): void
                     $sql = preg_replace('/DEFAULT\s+(CURRENT_DATE|curdate\(\))/i', '', $sql);
                     
                     $db = pdo(true);
-                    $db->exec('SET FOREIGN_KEY_CHECKS=0');
+                    // تعطيل القواعد الصارمة مؤقتاً لتمرير التواريخ القديمة مثل 0000-00-00
+                    $db->exec("SET sql_mode = '';");
+                    $db->exec('SET FOREIGN_KEY_CHECKS=0;');
                     try {
                         $db->exec($sql);
                         log_audit((int) $user['id'], 'restore', 'database', null, 'Restored from uploaded file');
