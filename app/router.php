@@ -1268,6 +1268,24 @@ function handle_post(string $route, array $user): void
         if ($action === 'reset') {
             reset_database();
             flash('تم تفريغ البيانات وإعادة تهيئة النظام من البداية. بيانات الدخول الافتراضية: admin / admin123');
+        } elseif ($action === 'restore') {
+            if (isset($_FILES['sql_file']) && $_FILES['sql_file']['error'] === UPLOAD_ERR_OK) {
+                $sql = file_get_contents($_FILES['sql_file']['tmp_name']);
+                if ($sql) {
+                    $db = pdo(true);
+                    $db->exec('SET FOREIGN_KEY_CHECKS=0');
+                    try {
+                        $db->exec($sql);
+                        log_audit((int) $user['id'], 'restore', 'database', null, 'Restored from uploaded file');
+                        flash('تم استرجاع قاعدة البيانات بنجاح.');
+                    } catch (Throwable $e) {
+                        flash('حدث خطأ أثناء الاسترجاع: ' . $e->getMessage(), 'danger');
+                    }
+                    $db->exec('SET FOREIGN_KEY_CHECKS=1');
+                }
+            } else {
+                flash('لم يتم رفع ملف صالح.', 'danger');
+            }
         } else {
             $file = backup_database((int) $user['id']);
             flash('تم إنشاء نسخة احتياطية: ' . basename($file));
