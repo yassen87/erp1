@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Call Center - نظام المراسلات</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --primary: #00e676;
+            --text: #e0e0e0;
+            --text-muted: #888;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: var(--surface);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 { color: var(--primary); margin-bottom: 5px; }
+        p { color: var(--text-muted); margin-bottom: 25px; }
+        .hidden { display: none; }
+        
+        /* QR Code Styles */
+        #qr-container {
+            margin: 20px auto;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        img { width: 250px; height: 250px; }
+        
+        /* Dashboard Styles */
+        .dashboard { text-align: right; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: var(--text); }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #2c2c2c;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 15px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary);
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover { background-color: #00c853; }
+        .status { margin-top: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<!-- صفحة تسجيل الدخول -->
+<div class="container" id="login-section">
+    <h1>ربط واتساب بالبرنامج</h1>
+    <p>قم بفتح تطبيق الواتساب على هاتفك، اذهب إلى الأجهزة المرتبطة، وصور الكود التالي:</p>
+    <div id="qr-container">
+        <img id="qr-image" src="" alt="جاري تحميل الكود... انتظر لحظات">
+    </div>
+    <div class="status" id="login-status">جاري الاتصال بسيرفر واتساب...</div>
+</div>
+
+<!-- صفحة Call Center -->
+<div class="container hidden" id="dashboard-section">
+    <h1>Call Center | مركز الاتصال</h1>
+    <p>واتساب متصل ويعمل بنجاح، البرنامج جاهز الآن لاستقبال الفواتير وإرسالها.</p>
+    
+    <div class="dashboard">
+        <h3 style="border-bottom: 1px solid #333; padding-bottom: 10px;">إرسال رسالة يدوية أو عرض لعميل</h3>
+        
+        <div class="form-group">
+            <label>رقم هاتف العميل</label>
+            <input type="text" id="phone" placeholder="مثال: 201123456789">
+        </div>
+        
+        <div class="form-group">
+            <label>محتوى الرسالة</label>
+            <textarea id="messageText" rows="4" placeholder="اكتب العرض أو الرسالة هنا..."></textarea>
+        </div>
+        
+        <button onclick="sendMsg()">إرسال الرسالة الآن</button>
+        <div id="send-status" class="status" style="text-align: center;"></div>
+    </div>
+</div>
+
+<script>
+    // استقبال الـ QR Code من الواتساب وعرضه
+    window.whatsapp.onQR((qrData) => {
+        document.getElementById('qr-image').src = qrData;
+        document.getElementById('login-status').innerText = 'يرجى مسح الكود بهاتفك لإتمام الربط';
+        document.getElementById('login-status').style.color = '#fff';
+    });
+
+    // عند نجاح تسجيل الدخول
+    window.whatsapp.onReady(() => {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+    });
+
+    // دالة إرسال الرسالة من الواجهة
+    async function sendMsg() {
+        const phone = document.getElementById('phone').value;
+        const text = document.getElementById('messageText').value;
+        const statusDiv = document.getElementById('send-status');
+        
+        if(!phone || !text) {
+            statusDiv.innerText = 'يرجى إدخال الرقم والرسالة أولاً!';
+            statusDiv.style.color = '#ff5252';
+            return;
+        }
+
+        statusDiv.innerText = 'جاري الإرسال...';
+        statusDiv.style.color = 'var(--text-muted)';
+        
+        // إرسال البيانات للـ Backend الخاص بنا
+        const res = await window.whatsapp.sendMessage(phone, text);
+        if(res.success) {
+            statusDiv.innerText = 'تم إرسال الرسالة بنجاح ✅';
+            statusDiv.style.color = 'var(--primary)';
+        } else {
+            statusDiv.innerText = 'حدث خطأ: ' + res.error;
+            statusDiv.style.color = '#ff5252';
+        }
+    }
+</script>
+</body>
+</html>

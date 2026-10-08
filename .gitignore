@@ -1,0 +1,68 @@
+node_modules/
+*/node_modules/
+frontend/node_modules/
+whatsapp-service/node_modules/
+WhatsApp-For-Client/whatsapp-service/node_modules/
+
+# Build outputs
+dist/
+build/
+frontend/dist/
+whatsapp-service/dist/
+
+# WhatsApp Auth Session (سري جداً - ارفعه على Github أبداً!)
+whatsapp_auth/
+whatsapp-service/whatsapp_auth/
+WhatsApp-For-Client/whatsapp-service/whatsapp_auth/
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Environment files (يحتوي على Secrets و DB Credentials)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Cache & Temp files
+storage/cache/*
+!storage/cache/.gitkeep
+storage/backups/*
+!storage/backups/.gitkeep
+*.tmp
+*.temp
+
+# Compressed & Archive files
+*.zip
+*.rar
+*.tar
+*.gz
+*.7z
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Package lock - optional but sometimes excluded for libraries
+# package-lock.json
+
+# Vite dev outputs
+frontend/.vite/
+.vite/
