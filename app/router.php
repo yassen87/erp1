@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 declare(strict_types=1);
 
@@ -15,7 +15,7 @@ function handle_ajax_requests(string $route): void
         if (!has_permission('pos')) {
             http_response_code(403);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'غير مصرح']);
+            echo json_encode(['success' => false, 'message' => 'ØºÙŠØ± Ù…ØµØ±Ø­']);
             exit;
         }
         
@@ -23,7 +23,7 @@ function handle_ajax_requests(string $route): void
         if ($locationId <= 0) {
             http_response_code(400);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'الفرع مطلوب']);
+            echo json_encode(['success' => false, 'message' => 'Ø§Ù„ÙØ±Ø¹ Ù…Ø·Ù„ÙˆØ¨']);
             exit;
         }
         
@@ -32,7 +32,7 @@ function handle_ajax_requests(string $route): void
         if ($userLocationId !== null && $userLocationId !== $locationId) {
             http_response_code(403);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'غير مصرح للوصول لهذا الفرع']);
+            echo json_encode(['success' => false, 'message' => 'ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ù„ÙˆØµÙˆÙ„ Ù„Ù‡Ø°Ø§ Ø§Ù„ÙØ±Ø¹']);
             exit;
         }
         
@@ -57,7 +57,7 @@ function handle_ajax_requests(string $route): void
         if (!has_permission('pos') && !has_permission('invoices_view')) {
             http_response_code(403);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'غير مصرح']);
+            echo json_encode(['success' => false, 'message' => 'ØºÙŠØ± Ù…ØµØ±Ø­']);
             exit;
         }
 
@@ -68,7 +68,7 @@ function handle_ajax_requests(string $route): void
         if ($customerId <= 0 && $search === '') {
             http_response_code(400);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'العميل أو نص البحث مطلوب']);
+            echo json_encode(['success' => false, 'message' => 'Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø£Ùˆ Ù†Øµ Ø§Ù„Ø¨Ø­Ø« Ù…Ø·Ù„ÙˆØ¨']);
             exit;
         }
 
@@ -110,7 +110,7 @@ function handle_ajax_requests(string $route): void
             $data = json_decode($json, true);
             if (!$data) $data = [];
             if (empty($data['products']) || !is_array($data['products'])) {
-                throw new Exception('لا توجد منتجات للإضافة');
+                throw new Exception('Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ù†ØªØ¬Ø§Øª Ù„Ù„Ø¥Ø¶Ø§ÙØ©');
             }
 
             $db = pdo();
@@ -183,7 +183,7 @@ function handle_ajax_requests(string $route): void
                 }
             }
             $user = current_user();
-            log_audit($user ? (int)$user['id'] : null, 'create', 'product', null, 'إضافة سريعة متعددة (' . count($data['products']) . ')');
+            log_audit($user ? (int)$user['id'] : null, 'create', 'product', null, 'Ø¥Ø¶Ø§ÙØ© Ø³Ø±ÙŠØ¹Ø© Ù…ØªØ¹Ø¯Ø¯Ø© (' . count($data['products']) . ')');
             $db->commit();
             
             echo json_encode(['success' => true]);
@@ -201,7 +201,7 @@ function handle_ajax_requests(string $route): void
         if (!has_permission('pos') && !has_permission('manage_returns')) {
             http_response_code(403);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'غير مصرح بعمل مرتجع']);
+            echo json_encode(['success' => false, 'message' => 'ØºÙŠØ± Ù…ØµØ±Ø­ Ø¨Ø¹Ù…Ù„ Ù…Ø±ØªØ¬Ø¹']);
             exit;
         }
 
@@ -211,13 +211,13 @@ function handle_ajax_requests(string $route): void
         $invoiceId = (int) ($data['invoice_id'] ?? 0);
         $refundMethod = (string) ($data['refund_method'] ?? 'cash');
         $refundPaid = isset($data['refund_paid']) ? (float) $data['refund_paid'] : -1.0;
-        $reason = trim((string) ($data['reason'] ?? 'مرتجع مباشر من الكاشير'));
+        $reason = trim((string) ($data['reason'] ?? 'Ù…Ø±ØªØ¬Ø¹ Ù…Ø¨Ø§Ø´Ø± Ù…Ù† Ø§Ù„ÙƒØ§Ø´ÙŠØ±'));
         $linesInput = $data['lines'] ?? [];
 
         if ($invoiceId <= 0 || empty($linesInput)) {
             http_response_code(400);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'بيانات المرتجع غير مكتملة']);
+            echo json_encode(['success' => false, 'message' => 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ØªØ¬Ø¹ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©']);
             exit;
         }
 
@@ -235,7 +235,7 @@ function handle_ajax_requests(string $route): void
         if (empty($lineIds)) {
             http_response_code(400);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'لم يتم تحديد أصناف صالحة للإرجاع']);
+            echo json_encode(['success' => false, 'message' => 'Ù„Ù… ÙŠØªÙ… ØªØ­Ø¯ÙŠØ¯ Ø£ØµÙ†Ø§Ù ØµØ§Ù„Ø­Ø© Ù„Ù„Ø¥Ø±Ø¬Ø§Ø¹']);
             exit;
         }
 
@@ -245,7 +245,7 @@ function handle_ajax_requests(string $route): void
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => 'تم تسجيل المرتجع واستعادة المخزون بنجاح',
+                'message' => 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…Ø±ØªØ¬Ø¹ ÙˆØ§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¨Ù†Ø¬Ø§Ø­',
             ]);
         } catch (Throwable $e) {
             http_response_code(500);
@@ -267,17 +267,17 @@ function handle_ajax_requests(string $route): void
         if (!$data || empty($data['phone']) || empty($data['message'])) {
             http_response_code(400);
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'error' => 'بيانات ناقصة']);
+            echo json_encode(['success' => false, 'error' => 'Ø¨ÙŠØ§Ù†Ø§Øª Ù†Ø§Ù‚ØµØ©']);
             exit;
         }
 
         $sent = send_whatsapp_message((string)$data['phone'], (string)$data['message']);
         header('Content-Type: application/json; charset=utf-8');
         if ($sent) {
-            echo json_encode(['success' => true, 'message' => 'تم إرسال الرسالة بنجاح']);
+            echo json_encode(['success' => true, 'message' => 'ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø±Ø³Ø§Ù„Ø© Ø¨Ù†Ø¬Ø§Ø­']);
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'تعذر الاتصال بمحرك الواتساب، يرجى التأكد من تشغيل الخدمة']);
+            echo json_encode(['success' => false, 'error' => 'ØªØ¹Ø°Ø± Ø§Ù„Ø§ØªØµØ§Ù„ Ø¨Ù…Ø­Ø±Ùƒ Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ØŒ ÙŠØ±Ø¬Ù‰ Ø§Ù„ØªØ£ÙƒØ¯ Ù…Ù† ØªØ´ØºÙŠÙ„ Ø§Ù„Ø®Ø¯Ù…Ø©']);
         }
         exit;
     }
@@ -355,7 +355,7 @@ function handle_ajax_requests(string $route): void
         
         if (!$barcode) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'بيانات ناقصة']);
+            echo json_encode(['success' => false, 'message' => 'Ø¨ÙŠØ§Ù†Ø§Øª Ù†Ø§Ù‚ØµØ©']);
             exit;
         }
         
@@ -364,7 +364,7 @@ function handle_ajax_requests(string $route): void
         if ($userLocationId !== null && $locationId > 0 && $userLocationId !== $locationId) {
             http_response_code(403);
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'غير مصرح']);
+            echo json_encode(['success' => false, 'message' => 'ØºÙŠØ± Ù…ØµØ±Ø­']);
             exit;
         }
         
@@ -391,7 +391,7 @@ function handle_ajax_requests(string $route): void
             }
 
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'المنتج أو العرض غير موجود']);
+            echo json_encode(['success' => false, 'message' => 'Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø§Ù„Ø¹Ø±Ø¶ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯']);
             exit;
         }
         
@@ -444,7 +444,7 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
-    // AJAX: البحث عن أسماء المنتجات لعرض الـ autocomplete
+    // AJAX: Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ø£Ø³Ù…Ø§Ø¡ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ù„Ø¹Ø±Ø¶ Ø§Ù„Ù€ autocomplete
     if ($route === 'product_name_search') {
         require_login();
         $q = trim((string) ($_GET['q'] ?? ''));
@@ -478,7 +478,7 @@ function handle_download(string $route): void
         $key = preg_replace('/[^a-z_]/', '', (string) $_GET['export']);
         if (!has_permission('reports_' . $key)) {
             http_response_code(403);
-            exit('غير مصرح');
+            exit('ØºÙŠØ± Ù…ØµØ±Ø­');
         }
         if (current_user_location_id() !== null) {
             $_GET['location_id'] = (string) current_user_location_id();
@@ -492,12 +492,12 @@ function handle_download(string $route): void
     require_login();
     if (!has_permission('backup')) {
         http_response_code(403);
-        exit('غير مصرح');
+        exit('ØºÙŠØ± Ù…ØµØ±Ø­');
     }
     $file = backup_file_path((string) $_GET['download']);
     if (!$file) {
         http_response_code(404);
-        exit('الملف غير موجود');
+        exit('Ø§Ù„Ù…Ù„Ù ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯');
     }
     header('Content-Type: application/sql');
     header('Content-Disposition: attachment; filename="' . basename($file) . '"');
@@ -515,49 +515,49 @@ function handle_post(string $route, array $user): void
     if ($route === 'products' && has_permission('products_view')) {
         if (post_string('action') === 'delete') {
             if (!has_permission('products_delete')) {
-                throw new RuntimeException('غير مصرح لك بحذف المنتجات.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª.');
             }
             $result = delete_product((int) post_string('id'));
             if ($result === 'permanently_deleted') {
-                flash('تم حذف المنتج نهائياً بنجاح.');
+                flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ù…Ù†ØªØ¬ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ø¨Ù†Ø¬Ø§Ø­.');
             } else {
-                flash('تم إخفاء المنتج وتعطيله لوجود فواتير أو حركات مخزن مرتبطة به.');
+                flash('ØªÙ… Ø¥Ø®ÙØ§Ø¡ Ø§Ù„Ù…Ù†ØªØ¬ ÙˆØªØ¹Ø·ÙŠÙ„Ù‡ Ù„ÙˆØ¬ÙˆØ¯ ÙÙˆØ§ØªÙŠØ± Ø£Ùˆ Ø­Ø±ÙƒØ§Øª Ù…Ø®Ø²Ù† Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ù‡.');
             }
             redirect('products');
         }
-        throw new RuntimeException('طلب غير صالح.');
+        throw new RuntimeException('Ø·Ù„Ø¨ ØºÙŠØ± ØµØ§Ù„Ø­.');
     }
 
     if ($route === 'product_create' && has_permission('products_add')) {
         add_products_batch($_POST);
-        flash('تم إضافة المنتج/المنتجات بنجاح.');
+        flash('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ù†ØªØ¬/Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø¨Ù†Ø¬Ø§Ø­.');
         redirect('products');
     }
 
     if ($route === 'product_edit' && has_permission('products_edit')) {
         update_product($_POST);
-        flash('تم تعديل المنتج.');
+        flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ù†ØªØ¬.');
         redirect('products');
     }
 
     if ($route === 'recipes' && has_permission('recipes_view')) {
         if (post_string('action') === 'delete') {
             if (!has_permission('recipes_edit')) {
-                throw new RuntimeException('غير مصرح لك بحذف التركيبات.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø§Øª.');
             }
             delete_recipe((int) post_string('id'));
-            flash('تم حذف التركيبة بنجاح.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
             if (!has_permission('recipes_add')) {
-                throw new RuntimeException('غير مصرح لك بإضافة أو تعديل التركيبات.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ø¶Ø§ÙØ© Ø£Ùˆ ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø§Øª.');
             }
             $recipe_id = (int) post_string('id');
             if ($recipe_id > 0) {
                 update_recipe($recipe_id, $_POST);
-                flash('تم تعديل التركيبة بنجاح.');
+                flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© Ø¨Ù†Ø¬Ø§Ø­.');
             } else {
                 add_recipe($_POST);
-                flash('تم حفظ التركيبة الجاهزة.');
+                flash('ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© Ø§Ù„Ø¬Ø§Ù‡Ø²Ø©.');
             }
         }
         redirect('recipes');
@@ -567,32 +567,32 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'delete') {
             if (!has_permission('products_edit') && !has_permission('products_add')) {
-                throw new RuntimeException('غير مصرح لك بحذف العروض.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ø¹Ø±ÙˆØ¶.');
             }
             delete_offer((int) post_string('id'), (int)$user['id']);
-            flash('تم حذف العرض بنجاح.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('offers');
         }
         if ($action === 'toggle_status') {
             if (!has_permission('products_edit')) {
-                throw new RuntimeException('غير مصرح لك بتعديل حالة العروض.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ø­Ø§Ù„Ø© Ø§Ù„Ø¹Ø±ÙˆØ¶.');
             }
             $newStatus = toggle_offer_status((int) post_string('id'), (int)$user['id']);
-            flash($newStatus ? 'تم تفعيل العرض بنجاح.' : 'تم إيقاف/تعطيل العرض بنجاح.');
+            flash($newStatus ? 'ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ù†Ø¬Ø§Ø­.' : 'ØªÙ… Ø¥ÙŠÙ‚Ø§Ù/ØªØ¹Ø·ÙŠÙ„ Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('offers');
         }
     }
 
     if ($route === 'offer_create' && has_permission('products_add')) {
         $offerId = create_offer($_POST, (int)$user['id']);
-        flash('تم إنشاء العرض بنجاح 🎁');
+        flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ù†Ø¬Ø§Ø­ ðŸŽ');
         redirect('offers');
     }
 
     if ($route === 'offer_edit' && has_permission('products_edit')) {
         $offerId = (int) post_string('id');
         update_offer($offerId, $_POST, (int)$user['id']);
-        flash('تم حفظ تعديلات العرض بنجاح.');
+        flash('ØªÙ… Ø­ÙØ¸ ØªØ¹Ø¯ÙŠÙ„Ø§Øª Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ù†Ø¬Ø§Ø­.');
         redirect('offers');
     }
 
@@ -600,27 +600,27 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'delete') {
             if (!has_permission('recipes_edit')) {
-                throw new RuntimeException('غير مصرح لك بحذف الجرامات الافتراضية.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©.');
             }
             delete_formula_default((int) post_string('id'));
-            flash('تم حذف إعداد الجرامات الافتراضية.');
+            flash('ØªÙ… Ø­Ø°Ù Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©.');
         } elseif ($action === 'delete_group') {
             if (!has_permission('recipes_edit')) {
-                throw new RuntimeException('غير مصرح لك بحذف الجرامات الافتراضية.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©.');
             }
             $qualityGrade = post_string('quality_grade');
             delete_formula_defaults_by_bottle((int) post_string('bottle_id'), $qualityGrade !== '' ? $qualityGrade : null);
-            flash('تم حذف مجموعة الجرامات الافتراضية للزجاجة.');
+            flash('ØªÙ… Ø­Ø°Ù Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ù„Ù„Ø²Ø¬Ø§Ø¬Ø©.');
         } else {
             if (!has_permission('recipes_add')) {
-                throw new RuntimeException('غير مصرح لك بإضافة أو تعديل الجرامات الافتراضية.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ø¶Ø§ÙØ© Ø£Ùˆ ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©.');
             }
             if ($action === 'replace_bottle_group') {
                 replace_formula_defaults_for_bottle($_POST);
-                flash('تم حفظ روابط الزجاجة بنجاح.');
+                flash('ØªÙ… Ø­ÙØ¸ Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø²Ø¬Ø§Ø¬Ø© Ø¨Ù†Ø¬Ø§Ø­.');
             } else {
                 upsert_formula_default($_POST);
-                flash('تم حفظ إعداد الجرامات الافتراضية بنجاح.');
+                flash('ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ø¬Ø±Ø§Ù…Ø§Øª Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ© Ø¨Ù†Ø¬Ø§Ø­.');
             }
         }
         redirect('formula_defaults');
@@ -628,12 +628,12 @@ function handle_post(string $route, array $user): void
 
     if ($route === 'inventory' && has_permission('inventory_view')) {
         if (!has_permission('inventory_adjust')) {
-            throw new RuntimeException('غير مصرح لك بتسوية المخزون.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³ÙˆÙŠØ© Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.');
         }
         $action = post_string('action');
         $locationId = (int) post_string('location_id');
         require_location_access($locationId);
-        require_location_type($locationId, ['warehouse', 'branch'], 'الأونلاين ليس مخزناً ولا يمكن تعديل رصيده.');
+        require_location_type($locationId, ['warehouse', 'branch'], 'Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„ÙŠØ³ Ù…Ø®Ø²Ù†Ø§Ù‹ ÙˆÙ„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯Ù‡.');
 
         if ($action === 'delete') {
             $movementIdStr = post_string('movement_id');
@@ -643,61 +643,61 @@ function handle_post(string $route, array $user): void
                     delete_inventory_addition((int) $id, (int) $user['id']);
                 }
             }
-            flash('تم حذف إضافة المخزون بنجاح.');
+            flash('ØªÙ… Ø­Ø°Ù Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¨Ù†Ø¬Ø§Ø­.');
         } elseif ($action === 'set_zero') {
-            // تصفير رصيد منتج في الفرع
+            // ØªØµÙÙŠØ± Ø±ØµÙŠØ¯ Ù…Ù†ØªØ¬ ÙÙŠ Ø§Ù„ÙØ±Ø¹
             $productId = (int) post_string('product_id');
             $db = pdo();
             $stmt = $db->prepare('UPDATE inventory_balances SET quantity = 0 WHERE product_id = ? AND location_id = ?');
             $stmt->execute([$productId, $locationId]);
-            log_audit((int)$user['id'], 'update', 'inventory_balance', $productId, 'تصفير رصيد المنتج في الفرع رقم ' . $locationId);
-            flash('تم تصفير الرصيد بنجاح.');
+            log_audit((int)$user['id'], 'update', 'inventory_balance', $productId, 'ØªØµÙÙŠØ± Ø±ØµÙŠØ¯ Ø§Ù„Ù…Ù†ØªØ¬ ÙÙŠ Ø§Ù„ÙØ±Ø¹ Ø±Ù‚Ù… ' . $locationId);
+            flash('ØªÙ… ØªØµÙÙŠØ± Ø§Ù„Ø±ØµÙŠØ¯ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('branch_inventory&location_id=' . $locationId);
         } elseif ($action === 'edit_balance') {
-            // تعديل رصيد منتج مباشرة
+            // ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯ Ù…Ù†ØªØ¬ Ù…Ø¨Ø§Ø´Ø±Ø©
             $productId   = (int) post_string('product_id');
             $newQuantity = (float) post_string('new_quantity');
             $db = pdo();
             $stmt = $db->prepare('UPDATE inventory_balances SET quantity = ? WHERE product_id = ? AND location_id = ?');
             $stmt->execute([$newQuantity, $productId, $locationId]);
-            log_audit((int)$user['id'], 'update', 'inventory_balance', $productId, 'تعديل رصيد مباشر للمنتج في الفرع: ' . $newQuantity);
-            flash('تم تعديل الكمية بنجاح.');
+            log_audit((int)$user['id'], 'update', 'inventory_balance', $productId, 'ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯ Ù…Ø¨Ø§Ø´Ø± Ù„Ù„Ù…Ù†ØªØ¬ ÙÙŠ Ø§Ù„ÙØ±Ø¹: ' . $newQuantity);
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ÙƒÙ…ÙŠØ© Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('branch_inventory&location_id=' . $locationId);
         } elseif ($action === 'update') {
             update_inventory_addition($_POST, (int) $user['id']);
-            flash('تم تعديل إضافة المخزون بنجاح.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
             create_inventory_addition($_POST, (int) $user['id']);
-            flash('تم تسجيل إضافة مخزون جديدة بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¥Ø¶Ø§ÙØ© Ù…Ø®Ø²ÙˆÙ† Ø¬Ø¯ÙŠØ¯Ø© Ø¨Ù†Ø¬Ø§Ø­.');
         }
         redirect('inventory');
     }
 
     if ($route === 'inventory_add' && has_permission('inventory_view')) {
         if (!has_permission('inventory_adjust')) {
-            throw new RuntimeException('غير مصرح لك بتسوية المخزون.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³ÙˆÙŠØ© Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.');
         }
         $locationId = (int) post_string('location_id');
         require_location_access($locationId);
-        require_location_type($locationId, ['warehouse', 'branch'], 'الأونلاين ليس مخزناً ولا يمكن تعديل رصيده.');
+        require_location_type($locationId, ['warehouse', 'branch'], 'Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„ÙŠØ³ Ù…Ø®Ø²Ù†Ø§Ù‹ ÙˆÙ„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø±ØµÙŠØ¯Ù‡.');
         create_inventory_additions($_POST, (int) $user['id']);
-        flash('تم تسجيل إضافات المخزون بنجاح.');
+        flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¥Ø¶Ø§ÙØ§Øª Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¨Ù†Ø¬Ø§Ø­.');
         redirect('inventory');
     }
 
     if ($route === 'transfers_supply' && has_permission('transfers')) {
         if (post_string('action') === 'receive') {
             receive_transfer((int) post_string('transfer_id'), (int) $user['id'], ['warehouse'], ['branch']);
-            flash('تم استلام التوريد وإضافة الكمية للفرع المستلم.');
+            flash('ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„ØªÙˆØ±ÙŠØ¯ ÙˆØ¥Ø¶Ø§ÙØ© Ø§Ù„ÙƒÙ…ÙŠØ© Ù„Ù„ÙØ±Ø¹ Ø§Ù„Ù…Ø³ØªÙ„Ù….');
         } elseif (post_string('action') === 'cancel') {
             cancel_transfer((int) post_string('transfer_id'), (int) $user['id'], ['warehouse'], ['branch']);
-            flash('تم إلغاء أمر التوريد وإعادة الكمية للمخزن.');
+            flash('ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø£Ù…Ø± Ø§Ù„ØªÙˆØ±ÙŠØ¯ ÙˆØ¥Ø¹Ø§Ø¯Ø© Ø§Ù„ÙƒÙ…ÙŠØ© Ù„Ù„Ù…Ø®Ø²Ù†.');
         } elseif (post_string('action') === 'update') {
             update_supply_transfer($_POST, (int) $user['id']);
-            flash('تم تعديل أمر التوريد بنجاح.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø£Ù…Ø± Ø§Ù„ØªÙˆØ±ÙŠØ¯ Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
             create_supply_transfer($_POST, (int) $user['id']);
-            flash('تم إنشاء أمر التوريد وخصم الكمية من المخزن.');
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø£Ù…Ø± Ø§Ù„ØªÙˆØ±ÙŠØ¯ ÙˆØ®ØµÙ… Ø§Ù„ÙƒÙ…ÙŠØ© Ù…Ù† Ø§Ù„Ù…Ø®Ø²Ù†.');
         }
         redirect('transfers_supply');
     }
@@ -705,16 +705,16 @@ function handle_post(string $route, array $user): void
     if ($route === 'transfers_branch' && has_permission('transfers')) {
         if (post_string('action') === 'receive') {
             receive_transfer((int) post_string('transfer_id'), (int) $user['id'], ['branch'], ['branch']);
-            flash('تم استلام التحويل وإضافة الكمية للفرع المستلم.');
+            flash('ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØ¥Ø¶Ø§ÙØ© Ø§Ù„ÙƒÙ…ÙŠØ© Ù„Ù„ÙØ±Ø¹ Ø§Ù„Ù…Ø³ØªÙ„Ù….');
         } elseif (post_string('action') === 'cancel') {
             cancel_transfer((int) post_string('transfer_id'), (int) $user['id'], ['branch'], ['branch']);
-            flash('تم إلغاء التحويل وإعادة الكمية للفرع المرسل.');
+            flash('ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØ¥Ø¹Ø§Ø¯Ø© Ø§Ù„ÙƒÙ…ÙŠØ© Ù„Ù„ÙØ±Ø¹ Ø§Ù„Ù…Ø±Ø³Ù„.');
         } elseif (post_string('action') === 'update') {
             update_branch_transfer($_POST, (int) $user['id']);
-            flash('تم تعديل أمر التحويل بنجاح.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø£Ù…Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
             create_branch_transfer($_POST, (int) $user['id']);
-            flash('تم إنشاء أمر التحويل وخصم الكمية من الفرع المرسل.');
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø£Ù…Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØ®ØµÙ… Ø§Ù„ÙƒÙ…ÙŠØ© Ù…Ù† Ø§Ù„ÙØ±Ø¹ Ø§Ù„Ù…Ø±Ø³Ù„.');
         }
         redirect('transfers_branch');
     }
@@ -725,9 +725,9 @@ function handle_post(string $route, array $user): void
         if ($action === 'update_paid') {
             $returnId = (int) post_string('return_id');
             $newPaid  = post_float('refund_paid');
-            if (!$returnId) throw new RuntimeException('معرف المرتجع مطلوب.');
+            if (!$returnId) throw new RuntimeException('Ù…Ø¹Ø±Ù Ø§Ù„Ù…Ø±ØªØ¬Ø¹ Ù…Ø·Ù„ÙˆØ¨.');
             update_return_paid($returnId, $newPaid, (int) $user['id']);
-            flash('تم تحديث مبلغ الرد بنجاح.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ù…Ø¨Ù„Øº Ø§Ù„Ø±Ø¯ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('returns');
         }
 
@@ -740,49 +740,49 @@ function handle_post(string $route, array $user): void
             $method    = post_string('refund_method', 'cash');
             $reason    = post_string('reason');
             if (!$invoiceId || !$reason) {
-                throw new RuntimeException('الفاتورة والسبب مطلوبان.');
+                throw new RuntimeException('Ø§Ù„ÙØ§ØªÙˆØ±Ø© ÙˆØ§Ù„Ø³Ø¨Ø¨ Ù…Ø·Ù„ÙˆØ¨Ø§Ù†.');
             }
             $returnedQuantities = $_POST['returned_quantities'] ?? [];
             create_return_selected_lines($invoiceId, $lineIds, $returnedQuantities, $method, $reason, (int) $user['id'], $refundPaid);
-            flash('تم تسجيل المرتجع بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…Ø±ØªØ¬Ø¹ Ø¨Ù†Ø¬Ø§Ø­.');
         } elseif ($returnType === 'invoice') {
             $invoiceId = (int) post_string('invoice_id');
             $method    = post_string('refund_method', 'cash');
             $reason    = post_string('reason');
             if (!$invoiceId || !$reason) {
-                throw new RuntimeException('الفاتورة والسبب مطلوبان.');
+                throw new RuntimeException('Ø§Ù„ÙØ§ØªÙˆØ±Ø© ÙˆØ§Ù„Ø³Ø¨Ø¨ Ù…Ø·Ù„ÙˆØ¨Ø§Ù†.');
             }
             create_return_invoice($invoiceId, $method, $reason, (int) $user['id'], $refundPaid);
-            flash('تم تسجيل مرتجع الفاتورة بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ù…Ø±ØªØ¬Ø¹ Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ø¨Ù†Ø¬Ø§Ø­.');
         } elseif ($returnType === 'line') {
             $lineId = (int) post_string('line_id');
             $method = post_string('refund_method', 'cash');
             $reason = post_string('reason');
             if (!$lineId || !$reason) {
-                throw new RuntimeException('بند الفاتورة والسبب مطلوبان.');
+                throw new RuntimeException('Ø¨Ù†Ø¯ Ø§Ù„ÙØ§ØªÙˆØ±Ø© ÙˆØ§Ù„Ø³Ø¨Ø¨ Ù…Ø·Ù„ÙˆØ¨Ø§Ù†.');
             }
             create_return_line_invoice($lineId, $method, $reason, (int) $user['id']);
-            flash('تم تسجيل مرتجع البند بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ù…Ø±ØªØ¬Ø¹ Ø§Ù„Ø¨Ù†Ø¯ Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
-            throw new RuntimeException('نوع المرتجع غير معروف.');
+            throw new RuntimeException('Ù†ÙˆØ¹ Ø§Ù„Ù…Ø±ØªØ¬Ø¹ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ.');
         }
         redirect('returns');
     }
 
     if ($route === 'waste' && has_permission('inventory_view')) {
         if (!has_permission('inventory_adjust')) {
-            throw new RuntimeException('غير مصرح لك بتسجيل هالك.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³Ø¬ÙŠÙ„ Ù‡Ø§Ù„Ùƒ.');
         }
         $locationId = (int) post_string('location_id');
         require_location_access($locationId);
-        require_location_type($locationId, ['warehouse', 'branch'], 'الأونلاين ليس مخزناً ولا يمكن تسجيل هالك عليه.');
+        require_location_type($locationId, ['warehouse', 'branch'], 'Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„ÙŠØ³ Ù…Ø®Ø²Ù†Ø§Ù‹ ÙˆÙ„Ø§ ÙŠÙ…ÙƒÙ† ØªØ³Ø¬ÙŠÙ„ Ù‡Ø§Ù„Ùƒ Ø¹Ù„ÙŠÙ‡.');
         add_wasted_product([
             'location_id' => $locationId,
             'product_id' => (int) post_string('product_id'),
             'quantity' => post_float('quantity'),
             'reason' => post_string('reason'),
         ], (int) $user['id']);
-        flash('تم تسجيل الهالك وخصمه من مخزون الموقع بنجاح.');
+        flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù‡Ø§Ù„Ùƒ ÙˆØ®ØµÙ…Ù‡ Ù…Ù† Ù…Ø®Ø²ÙˆÙ† Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø¨Ù†Ø¬Ø§Ø­.');
         redirect('waste');
     }
 
@@ -790,19 +790,19 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'pay_debt') {
             if (!has_permission('customers_pay_debt')) {
-                throw new RuntimeException('غير مصرح لك بتسجيل سداد الديون.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³Ø¬ÙŠÙ„ Ø³Ø¯Ø§Ø¯ Ø§Ù„Ø¯ÙŠÙˆÙ†.');
             }
             add_customer_payment((int) post_string('debt_id'), post_float('amount'), post_string('method', 'cash'), (int) $user['id']);
-            flash('تم تسجيل دفعة الدين بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¯ÙØ¹Ø© Ø§Ù„Ø¯ÙŠÙ† Ø¨Ù†Ø¬Ø§Ø­.');
         } elseif ($action === 'add_direct_debt') {
             $customerId = (int) post_string('customer_id');
             $amount = post_float('amount');
             $notes = post_string('notes');
             $locationId = (int) post_string('location_id') ?: current_user_location_id();
             add_direct_customer_debt($customerId, $amount, $notes, $locationId, (int) $user['id']);
-            flash('تم تسجيل الدين المباشر على العميل بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙŠÙ† Ø§Ù„Ù…Ø¨Ø§Ø´Ø± Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
-            throw new RuntimeException('طلب غير صالح لصفحة الديون المفتوحة.');
+            throw new RuntimeException('Ø·Ù„Ø¨ ØºÙŠØ± ØµØ§Ù„Ø­ Ù„ØµÙØ­Ø© Ø§Ù„Ø¯ÙŠÙˆÙ† Ø§Ù„Ù…ÙØªÙˆØ­Ø©.');
         }
         $query = $_GET;
         unset($query['r']);
@@ -812,17 +812,17 @@ function handle_post(string $route, array $user): void
     if ($route === 'customers' && has_permission('customers_view')) {
         if (post_string('action') === 'pay_debt') {
             if (!has_permission('customers_pay_debt')) {
-                throw new RuntimeException('غير مصرح لك بتسجيل سداد الديون.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³Ø¬ÙŠÙ„ Ø³Ø¯Ø§Ø¯ Ø§Ù„Ø¯ÙŠÙˆÙ†.');
             }
             add_customer_payment((int) post_string('debt_id'), post_float('amount'), post_string('method', 'cash'), (int) $user['id']);
-            flash('تم تسجيل دفعة الدين.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø¯ÙØ¹Ø© Ø§Ù„Ø¯ÙŠÙ†.');
         } elseif (post_string('action') === 'add_direct_debt') {
             $customerId = (int) post_string('customer_id');
             $amount = post_float('amount');
             $notes = post_string('notes');
             $locationId = (int) post_string('location_id') ?: current_user_location_id();
             add_direct_customer_debt($customerId, $amount, $notes, $locationId, (int) $user['id']);
-            flash('تم تسجيل الدين المباشر على العميل بنجاح.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙŠÙ† Ø§Ù„Ù…Ø¨Ø§Ø´Ø± Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø¨Ù†Ø¬Ø§Ø­.');
             $redirectTo = post_string('redirect_to');
             if ($redirectTo === 'customer_view') {
                 redirect('customer_view&id=' . $customerId);
@@ -830,23 +830,23 @@ function handle_post(string $route, array $user): void
             redirect('customers');
         } elseif (post_string('action') === 'update') {
             if (!has_permission('customers_edit')) {
-                throw new RuntimeException('غير مصرح لك بتعديل بيانات العملاء.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡.');
             }
             update_customer($_POST);
-            flash('تم تعديل بيانات العميل.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¹Ù…ÙŠÙ„.');
         } elseif (post_string('action') === 'delete') {
             if (!has_permission('customers_edit')) {
-                throw new RuntimeException('غير مصرح لك بحذف العملاء.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡.');
             }
             $result = delete_customer((int) post_string('id'));
             if ($result === 'permanently_deleted') {
-                flash('تم حذف العميل نهائياً بنجاح.');
+                flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¹Ù…ÙŠÙ„ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ø¨Ù†Ø¬Ø§Ø­.');
             } else {
-                flash('تم إخفاء العميل وتعطيله لوجود فواتير أو حركات مرتبطة به.');
+                flash('ØªÙ… Ø¥Ø®ÙØ§Ø¡ Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØªØ¹Ø·ÙŠÙ„Ù‡ Ù„ÙˆØ¬ÙˆØ¯ ÙÙˆØ§ØªÙŠØ± Ø£Ùˆ Ø­Ø±ÙƒØ§Øª Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ù‡.');
             }
         } else {
             if (!has_permission('customers_add')) {
-                throw new RuntimeException('غير مصرح لك بإضافة عملاء.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ø¶Ø§ÙØ© Ø¹Ù…Ù„Ø§Ø¡.');
             }
             add_customer([
                 'name' => post_string('name'),
@@ -856,7 +856,7 @@ function handle_post(string $route, array $user): void
                 'location_id' => current_user_location_id(),
                 'created_by' => (int) $user['id'],
             ]);
-            flash('تم إضافة العميل.');
+            flash('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¹Ù…ÙŠÙ„.');
         }
         redirect('customers');
     }
@@ -867,7 +867,7 @@ function handle_post(string $route, array $user): void
             save_setting('whatsapp_birthday_enabled', post_string('whatsapp_birthday_enabled') === '1' ? '1' : '0');
             save_setting('whatsapp_birthday_send_time', post_string('whatsapp_birthday_send_time', '12:00'));
             save_setting('whatsapp_birthday_message', post_string('whatsapp_birthday_message'));
-            flash('تم حفظ إعدادات أعياد الميلاد وموعد الإرسال اليومي بنجاح.');
+            flash('ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø£Ø¹ÙŠØ§Ø¯ Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯ ÙˆÙ…ÙˆØ¹Ø¯ Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ÙŠÙˆÙ…ÙŠ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('customer_birthdays&tab=settings');
         } elseif ($action === 'send_single') {
             $customerId = (int) post_string('customer_id');
@@ -883,16 +883,16 @@ function handle_post(string $route, array $user): void
             $force = post_string('force_resend') === '1';
             $res = process_daily_birthday_whatsapp($force);
             $msg = sprintf(
-                'تم الإرسال لـ %d عميل | تم تخطي %d | فشل %d (إجمالي اليوم: %d)',
+                'ØªÙ… Ø§Ù„Ø¥Ø±Ø³Ø§Ù„ Ù„Ù€ %d Ø¹Ù…ÙŠÙ„ | ØªÙ… ØªØ®Ø·ÙŠ %d | ÙØ´Ù„ %d (Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„ÙŠÙˆÙ…: %d)',
                 $res['sent_count'],
                 $res['skipped_count'],
                 $res['failed_count'],
                 $res['total_today']
             );
             if ($res['sent_count'] > 0) {
-                flash('تم إرسال تهاني أعياد الميلاد بنجاح! ' . $msg);
+                flash('ØªÙ… Ø¥Ø±Ø³Ø§Ù„ ØªÙ‡Ø§Ù†ÙŠ Ø£Ø¹ÙŠØ§Ø¯ Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯ Ø¨Ù†Ø¬Ø§Ø­! ' . $msg);
             } elseif ($res['skipped_count'] > 0 && $res['total_today'] > 0) {
-                flash('تم إرسال التهنئة لجميع عملاء اليوم مسبقاً! ' . $msg, 'warning');
+                flash('ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ØªÙ‡Ù†Ø¦Ø© Ù„Ø¬Ù…ÙŠØ¹ Ø¹Ù…Ù„Ø§Ø¡ Ø§Ù„ÙŠÙˆÙ… Ù…Ø³Ø¨Ù‚Ø§Ù‹! ' . $msg, 'warning');
             } else {
                 flash($msg, $res['failed_count'] > 0 ? 'error' : 'warning');
             }
@@ -907,7 +907,7 @@ function handle_post(string $route, array $user): void
             save_setting('whatsapp_survey_enabled', post_string('whatsapp_survey_enabled') === '1' ? '1' : '0');
             save_setting('whatsapp_survey_delay_minutes', (string) max(1, (int)post_string('whatsapp_survey_delay_minutes', '10')));
             save_setting('whatsapp_survey_message', post_string('whatsapp_survey_message'));
-            flash('تم حفظ إعدادات استبيان رضا العملاء ووقت التأخير بنجاح.');
+            flash('ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ø³ØªØ¨ÙŠØ§Ù† Ø±Ø¶Ø§ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ ÙˆÙˆÙ‚Øª Ø§Ù„ØªØ£Ø®ÙŠØ± Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('customer_surveys&tab=settings');
         } elseif ($action === 'send_now') {
             $queueId = (int) post_string('queue_id');
@@ -920,14 +920,14 @@ function handle_post(string $route, array $user): void
             redirect('customer_surveys' . (!empty($_GET['tab']) ? '&tab=' . urlencode($_GET['tab']) : ''));
         } elseif ($action === 'process_queue_now') {
             $res = process_survey_queue(50);
-            flash("تمت معالجة الطابور بنجاح: تم إرسال {$res['sent']} رسالة استبيان (فشل {$res['failed']}).");
+            flash("ØªÙ…Øª Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø·Ø§Ø¨ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­: ØªÙ… Ø¥Ø±Ø³Ø§Ù„ {$res['sent']} Ø±Ø³Ø§Ù„Ø© Ø§Ø³ØªØ¨ÙŠØ§Ù† (ÙØ´Ù„ {$res['failed']}).");
             redirect('customer_surveys');
         } elseif ($action === 'cancel') {
             $queueId = (int) post_string('queue_id');
             $db = pdo();
             $stmt = $db->prepare("UPDATE customer_survey_queue SET status = 'cancelled' WHERE id = ? AND status = 'pending'");
             $stmt->execute([$queueId]);
-            flash('تم إلغاء إرسال رسالة الاستبيان المحددة.');
+            flash('ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø±Ø³Ø§Ù„Ø© Ø§Ù„Ø§Ø³ØªØ¨ÙŠØ§Ù† Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©.');
             redirect('customer_surveys&tab=queue');
         }
         redirect('customer_surveys');
@@ -935,15 +935,15 @@ function handle_post(string $route, array $user): void
 
     if ($route === 'pos' && has_permission('pos')) {
         $invoiceId = create_invoice($_POST, $user);
-        // إرسال الفاتورة تلقائياً للعميل عبر الواتساب
+        // Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„ÙØ§ØªÙˆØ±Ø© ØªÙ„Ù‚Ø§Ø¦ÙŠØ§Ù‹ Ù„Ù„Ø¹Ù…ÙŠÙ„ Ø¹Ø¨Ø± Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨
         try {
             send_invoice_whatsapp($invoiceId);
         } catch (Throwable $waErr) {}
-        // جدولة رسالة استبيان رضا العميل بعد وقت محدد
+        // Ø¬Ø¯ÙˆÙ„Ø© Ø±Ø³Ø§Ù„Ø© Ø§Ø³ØªØ¨ÙŠØ§Ù† Ø±Ø¶Ø§ Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø¨Ø¹Ø¯ ÙˆÙ‚Øª Ù…Ø­Ø¯Ø¯
         try {
             schedule_invoice_satisfaction_survey($invoiceId);
         } catch (Throwable $surveyErr) {}
-        flash('تم إنشاء الفاتورة رقم #' . $invoiceId . ' وخصم المخزون.');
+        flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ø±Ù‚Ù… #' . $invoiceId . ' ÙˆØ®ØµÙ… Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.');
         // Redirect back to POS and request the client to open the printable invoice in a new window
         // also instruct client to clear the POS cart
         redirect('pos&print_invoice=' . $invoiceId . '&clear_cart=1');
@@ -953,10 +953,10 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'delete') {
             delete_shift_closure((int) post_string('id'));
-            flash('تم حذف الشيفت بنجاح.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø´ÙŠÙØª Ø¨Ù†Ø¬Ø§Ø­.');
         } elseif ($action === 'update') {
             update_shift_closure((int) post_string('id'), post_float('actual_cash'), post_string('notes'));
-            flash('تم تعديل الشيفت بنجاح.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø´ÙŠÙØª Ø¨Ù†Ø¬Ø§Ø­.');
         } else {
             $locationId = (int) post_string('location_id');
             $actualCash = post_float('actual_cash');
@@ -965,7 +965,7 @@ function handle_post(string $route, array $user): void
             $cashAmount = post_float('cash_transferred_amount', 0);
             
             close_shift_with_details($locationId, $actualCash, $notes, $user, $cashAction, $cashAmount);
-            flash('✅ تم إغلاق الشيفت وتسجيل الكاش بنجاح.');
+            flash('âœ… ØªÙ… Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø´ÙŠÙØª ÙˆØªØ³Ø¬ÙŠÙ„ Ø§Ù„ÙƒØ§Ø´ Ø¨Ù†Ø¬Ø§Ø­.');
         }
         redirect('shifts');
     }
@@ -977,16 +977,16 @@ function handle_post(string $route, array $user): void
             $db = pdo();
             $stmt = $db->prepare('UPDATE invoices SET notes = ? WHERE id = ?');
             $stmt->execute([$notes, $invoiceId]);
-            flash('تم تحديث ملاحظات الفاتورة.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø§Ù„ÙØ§ØªÙˆØ±Ø©.');
             redirect('invoices');
         }
         if (post_string('action') === 'delete_invoice') {
             if (!has_permission('manager')) {
-                throw new RuntimeException('حذف الفواتير متاح للمديرين فقط.');
+                throw new RuntimeException('Ø­Ø°Ù Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ù…ØªØ§Ø­ Ù„Ù„Ù…Ø¯ÙŠØ±ÙŠÙ† ÙÙ‚Ø·.');
             }
             $invoiceId = (int) post_string('invoice_id');
             delete_invoice_with_restore($invoiceId, (int) $user['id']);
-            flash('تم حذف الفاتورة وإرجاع المخزون بنجاح.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„ÙØ§ØªÙˆØ±Ø© ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('invoices');
         }
     }
@@ -994,10 +994,10 @@ function handle_post(string $route, array $user): void
     if ($route === 'returns' && has_permission('returns')) {
         if (post_string('return_type') === 'line') {
             create_return_line_invoice((int) post_string('line_id'), post_string('refund_method', 'cash'), post_string('reason'), (int) $user['id']);
-            flash('تم تنفيذ مرتجع البند وإرجاع المخزون.');
+            flash('ØªÙ… ØªÙ†ÙÙŠØ° Ù…Ø±ØªØ¬Ø¹ Ø§Ù„Ø¨Ù†Ø¯ ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.');
         } else {
             create_return_invoice((int) post_string('invoice_id'), post_string('refund_method', 'cash'), post_string('reason'), (int) $user['id']);
-            flash('تم تنفيذ المرتجع وإرجاع المخزون.');
+            flash('ØªÙ… ØªÙ†ÙÙŠØ° Ø§Ù„Ù…Ø±ØªØ¬Ø¹ ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†.');
         }
         redirect('returns');
     }
@@ -1005,28 +1005,28 @@ function handle_post(string $route, array $user): void
     if ($route === 'attendance') {
         if (post_string('action') === 'generate_qr') {
             if (!has_permission('attendance')) {
-                throw new RuntimeException('غير مصرح لك بتوليد رمز QR.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªÙˆÙ„ÙŠØ¯ Ø±Ù…Ø² QR.');
             }
             $locationId = (int) post_string('location_id');
-            require_location_type($locationId, ['warehouse', 'branch'], 'الأونلاين لا يتم توليد QR حضور له.');
+            require_location_type($locationId, ['warehouse', 'branch'], 'Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„Ø§ ÙŠØªÙ… ØªÙˆÙ„ÙŠØ¯ QR Ø­Ø¶ÙˆØ± Ù„Ù‡.');
             $token = 'LOC-' . $locationId . '-' . bin2hex(random_bytes(8));
             $db = pdo();
             $stmt = $db->prepare('UPDATE locations SET qr_code = ? WHERE id = ?');
             $stmt->execute([$token, $locationId]);
-            flash('تم توليد رمز QR بنجاح.');
+            flash('ØªÙ… ØªÙˆÙ„ÙŠØ¯ Ø±Ù…Ø² QR Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('attendance&tab=qrcodes');
         } elseif (post_string('action') === 'update_location_geo') {
             if (!has_permission('users_permissions')) {
-                throw new RuntimeException('غير مصرح لك بتعديل موقع الفرع.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ù…ÙˆÙ‚Ø¹ Ø§Ù„ÙØ±Ø¹.');
             }
             $locationId = (int) post_string('location_id');
-            require_location_type($locationId, ['warehouse', 'branch'], 'الأونلاين لا يتم تسجيل حضور أو انصراف له.');
+            require_location_type($locationId, ['warehouse', 'branch'], 'Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„Ø§ ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ± Ø£Ùˆ Ø§Ù†ØµØ±Ø§Ù Ù„Ù‡.');
             $lat = post_float('latitude');
             $lng = post_float('longitude');
             $db = pdo();
             $stmt = $db->prepare('UPDATE locations SET latitude = ?, longitude = ? WHERE id = ?');
             $stmt->execute([$lat, $lng, $locationId]);
-            flash('تم تحديث الإحداثيات الجغرافية للموقع بنجاح.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª Ø§Ù„Ø¬ØºØ±Ø§ÙÙŠØ© Ù„Ù„Ù…ÙˆÙ‚Ø¹ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('attendance&tab=qrcodes');
         } elseif (post_string('action') === 'qr_scan') {
             $token = post_string('qr_token');
@@ -1039,55 +1039,55 @@ function handle_post(string $route, array $user): void
             $stmt->execute([$token]);
             $loc = $stmt->fetch();
             if (!$loc) {
-                flash('رمز QR غير صالح أو الموقع غير نشط.', 'danger');
+                flash('Ø±Ù…Ø² QR ØºÙŠØ± ØµØ§Ù„Ø­ Ø£Ùˆ Ø§Ù„Ù…ÙˆÙ‚Ø¹ ØºÙŠØ± Ù†Ø´Ø·.', 'danger');
                 redirect('attendance');
             }
             if ($loc['type'] === 'online') {
-                throw new RuntimeException('الأونلاين لا يتم تسجيل حضور أو انصراف له.');
+                throw new RuntimeException('Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ† Ù„Ø§ ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ± Ø£Ùˆ Ø§Ù†ØµØ±Ø§Ù Ù„Ù‡.');
             }
             require_location_access((int) $loc['id']);
 
             // GPS Lock verification (must be within 10 meters)
             if ($loc['latitude'] === null || $loc['longitude'] === null) {
-                throw new RuntimeException('إحداثيات هذا الفرع غير مسجلة بالنظام. يرجى مراجعة الإدارة.');
+                throw new RuntimeException('Ø¥Ø­Ø¯Ø§Ø«ÙŠØ§Øª Ù‡Ø°Ø§ Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø³Ø¬Ù„Ø© Ø¨Ø§Ù„Ù†Ø¸Ø§Ù…. ÙŠØ±Ø¬Ù‰ Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„Ø¥Ø¯Ø§Ø±Ø©.');
             }
             if ($lat === null || $lng === null) {
-                throw new RuntimeException('يرجى تفعيل الـ GPS والسماح للمتصفح بالوصول لموقعك الجغرافي لتسجيل الحضور.');
+                throw new RuntimeException('ÙŠØ±Ø¬Ù‰ ØªÙØ¹ÙŠÙ„ Ø§Ù„Ù€ GPS ÙˆØ§Ù„Ø³Ù…Ø§Ø­ Ù„Ù„Ù…ØªØµÙØ­ Ø¨Ø§Ù„ÙˆØµÙˆÙ„ Ù„Ù…ÙˆÙ‚Ø¹Ùƒ Ø§Ù„Ø¬ØºØ±Ø§ÙÙŠ Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ±.');
             }
             $distance = calculate_distance((float)$lat, (float)$lng, (float)$loc['latitude'], (float)$loc['longitude']);
             if ($distance > 20.0) {
-                throw new RuntimeException('أنت بعيد جداً عن الفرع. المسافة الحالية: ' . round($distance, 1) . ' متر. يجب أن تكون على بعد 20 متراً على الأكثر لتسجيل حضور/انصراف.');
+                throw new RuntimeException('Ø£Ù†Øª Ø¨Ø¹ÙŠØ¯ Ø¬Ø¯Ø§Ù‹ Ø¹Ù† Ø§Ù„ÙØ±Ø¹. Ø§Ù„Ù…Ø³Ø§ÙØ© Ø§Ù„Ø­Ø§Ù„ÙŠØ©: ' . round($distance, 1) . ' Ù…ØªØ±. ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø¹Ù„Ù‰ Ø¨Ø¹Ø¯ 20 Ù…ØªØ±Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£ÙƒØ«Ø± Ù„ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ±/Ø§Ù†ØµØ±Ø§Ù.');
             }
 
             // Double scan / status check verification
             $expectedAction = get_next_attendance_action((int) $user['id']);
             if ($scanAction !== $expectedAction) {
                 if ($scanAction === 'check_in') {
-                    throw new RuntimeException('لقد قمت بتسجيل الحضور بالفعل.');
+                    throw new RuntimeException('Ù„Ù‚Ø¯ Ù‚Ù…Øª Ø¨ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø¨Ø§Ù„ÙØ¹Ù„.');
                 } else {
-                    throw new RuntimeException('يجب تسجيل الحضور أولاً قبل تسجيل الانصراف.');
+                    throw new RuntimeException('ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø£ÙˆÙ„Ø§Ù‹ Ù‚Ø¨Ù„ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø§Ù†ØµØ±Ø§Ù.');
                 }
             }
             
             $stmt = $db->prepare('INSERT INTO attendance_records (user_id, location_id, action, source, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?)');
             $stmt->execute([$user['id'], $loc['id'], $scanAction, 'qr', $lat, $lng]);
             
-            flash(($scanAction === 'check_in' ? 'تم تسجيل حضورك بنجاح في ' : 'تم تسجيل انصرافك بنجاح من ') . $loc['name']);
+            flash(($scanAction === 'check_in' ? 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø­Ø¶ÙˆØ±Ùƒ Ø¨Ù†Ø¬Ø§Ø­ ÙÙŠ ' : 'ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù†ØµØ±Ø§ÙÙƒ Ø¨Ù†Ø¬Ø§Ø­ Ù…Ù† ') . $loc['name']);
             redirect('attendance');
         } else {
             if (!has_permission('attendance')) {
-                throw new RuntimeException('غير مصرح لك بالتحكم في الحضور والانصراف.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø§Ù„ØªØ­ÙƒÙ… ÙÙŠ Ø§Ù„Ø­Ø¶ÙˆØ± ÙˆØ§Ù„Ø§Ù†ØµØ±Ø§Ù.');
             }
             $action = post_string('action');
             if ($action === 'delete_attendance') {
                 delete_attendance((int) post_string('attendance_id'), (int) $user['id']);
-                flash('تم حذف سجل الحضور بنجاح.');
+                flash('ØªÙ… Ø­Ø°Ù Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.');
             } elseif ($action === 'update_attendance') {
                 update_attendance((int) post_string('attendance_id'), $_POST, (int) $user['id']);
-                flash('تم تعديل سجل الحضور بنجاح.');
+                flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.');
             } else {
                 add_attendance($_POST, (int) $user['id']);
-                flash('تم إضافة سجل الحضور اليدوي بنجاح.');
+                flash('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø§Ù„ÙŠØ¯ÙˆÙŠ Ø¨Ù†Ø¬Ø§Ø­.');
             }
             redirect('attendance_log');
         }
@@ -1097,39 +1097,39 @@ function handle_post(string $route, array $user): void
         $action = post_string('action', 'save_tiers');
         if ($action === 'save_tiers') {
             save_target_commission_tiers($_POST, (int) $user['id']);
-            flash('تم حفظ شرائح عمولات التارجت.');
+            flash('ØªÙ… Ø­ÙØ¸ Ø´Ø±Ø§Ø¦Ø­ Ø¹Ù…ÙˆÙ„Ø§Øª Ø§Ù„ØªØ§Ø±Ø¬Øª.');
             redirect('targets');
         }
         if ($action === 'delete') {
             delete_target((int) post_string('id'));
-            flash('تم حذف التارجت اليومي.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„ØªØ§Ø±Ø¬Øª Ø§Ù„ÙŠÙˆÙ…ÙŠ.');
         } elseif ($action === 'update') {
             $locationId = (int) post_string('location_id');
             update_target((int) post_string('id'), $locationId, post_string('target_date'), post_float('target_amount'), (int) $user['id']);
-            flash('تم تعديل التارجت اليومي.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØªØ§Ø±Ø¬Øª Ø§Ù„ÙŠÙˆÙ…ÙŠ.');
         } else {
             $locationId = (int) post_string('location_id');
             require_location_access($locationId);
             upsert_target($locationId, post_string('target_date'), post_float('target_amount'), (int) $user['id']);
-            flash('تم حفظ التارجت اليومي.');
+            flash('ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªØ§Ø±Ø¬Øª Ø§Ù„ÙŠÙˆÙ…ÙŠ.');
         }
         redirect('targets');
     }
 
     if ($route === 'expenses' && has_permission('expenses_view')) {
         if (!has_permission('expenses_add')) {
-            throw new RuntimeException('غير مصرح لك بتسجيل مصاريف.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³Ø¬ÙŠÙ„ Ù…ØµØ§Ø±ÙŠÙ.');
         }
         $action = post_string('action', 'add');
         if ($action === 'edit') {
             edit_expense((int) $_POST['id'], $_POST, (int) $user['id']);
-            flash('تم تعديل المصروف.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…ØµØ±ÙˆÙ.');
         } elseif ($action === 'delete') {
             delete_expense((int) $_POST['id'], (int) $user['id']);
-            flash('تم حذف المصروف.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ù…ØµØ±ÙˆÙ.');
         } else {
             add_expense($_POST, (int) $user['id']);
-            flash('تم تسجيل المصروف.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…ØµØ±ÙˆÙ.');
         }
         redirect('expenses');
     }
@@ -1138,19 +1138,19 @@ function handle_post(string $route, array $user): void
         $action = post_string('action', 'create');
         if ($action === 'receive') {
             if (!has_permission('manager_treasury') && current_user()['role_code'] !== 'admin') {
-                throw new RuntimeException('غير مصرح لك بتأكيد استلام التحويل، متاح لمدير النظام فقط.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ£ÙƒÙŠØ¯ Ø§Ø³ØªÙ„Ø§Ù… Ø§Ù„ØªØ­ÙˆÙŠÙ„ØŒ Ù…ØªØ§Ø­ Ù„Ù…Ø¯ÙŠØ± Ø§Ù„Ù†Ø¸Ø§Ù… ÙÙ‚Ø·.');
             }
             receive_branch_cash_transfer((int) post_string('id'), (int) $user['id']);
-            flash('تم استلام تحويل الخزينة.');
+            flash('ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø®Ø²ÙŠÙ†Ø©.');
         } elseif ($action === 'cancel') {
             cancel_branch_cash_transfer((int) post_string('id'), (int) $user['id']);
-            flash('تم إلغاء تحويل الخزينة وإرجاع الرصيد.');
+            flash('ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø®Ø²ÙŠÙ†Ø© ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ø±ØµÙŠØ¯.');
         } else {
             if (!has_permission('expenses_add') && !has_permission('branch_cash_transfers')) {
-                throw new RuntimeException('غير مصرح لك بإنشاء تحويل خزينة.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ù†Ø´Ø§Ø¡ ØªØ­ÙˆÙŠÙ„ Ø®Ø²ÙŠÙ†Ø©.');
             }
             create_branch_cash_transfer($_POST, (int) $user['id']);
-            flash('تم إنشاء تحويل الخزينة.');
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ø®Ø²ÙŠÙ†Ø©.');
         }
         redirect('branch_cash_transfers');
     }
@@ -1159,27 +1159,27 @@ function handle_post(string $route, array $user): void
         $action = post_string('action', 'receive');
         if ($action === 'receive') {
             receive_manager_collection((int) post_string('id'), (int) $user['id']);
-            flash('تم تأكيد استلام تحصيل خزينة المدير.');
+            flash('ØªÙ… ØªØ£ÙƒÙŠØ¯ Ø§Ø³ØªÙ„Ø§Ù… ØªØ­ØµÙŠÙ„ Ø®Ø²ÙŠÙ†Ø© Ø§Ù„Ù…Ø¯ÙŠØ±.');
         } elseif ($action === 'cancel') {
             cancel_manager_collection((int) post_string('id'), (int) $user['id']);
-            flash('تم إلغاء تحصيل خزينة المدير.');
+            flash('ØªÙ… Ø¥Ù„ØºØ§Ø¡ ØªØ­ØµÙŠÙ„ Ø®Ø²ÙŠÙ†Ø© Ø§Ù„Ù…Ø¯ÙŠØ±.');
         }
         redirect('manager_treasury');
     }
 
     if ($route === 'suppliers' && has_permission('suppliers_view')) {
         if (!has_permission('suppliers_add')) {
-            throw new RuntimeException('غير مصرح لك بتسجيل موردين.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ³Ø¬ÙŠÙ„ Ù…ÙˆØ±Ø¯ÙŠÙ†.');
         }
         add_supplier($_POST, (int) $user['id']);
-        flash('تم تسجيل المورد.');
+        flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…ÙˆØ±Ø¯.');
         redirect('suppliers');
     }
 
     if ($route === 'users' && has_permission('users_view')) {
         if (post_string('action') === 'save_permissions') {
             if (!has_permission('users_permissions')) {
-                throw new RuntimeException('غير مصرح لك بتعديل الصلاحيات.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ§Øª.');
             }
             $db = pdo();
             $db->beginTransaction();
@@ -1194,7 +1194,7 @@ function handle_post(string $route, array $user): void
                 }
                 $db->commit();
                 unset($_SESSION['permissions']);
-                flash('تم حفظ الصلاحيات بنجاح.');
+                flash('ØªÙ… Ø­ÙØ¸ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ§Øª Ø¨Ù†Ø¬Ø§Ø­.');
                 redirect('users&tab=permissions');
             } catch (Throwable $e) {
                 $db->rollBack();
@@ -1202,7 +1202,7 @@ function handle_post(string $route, array $user): void
             }
         } elseif (post_string('action') === 'add_role') {
             if (!has_permission('users_permissions')) {
-                throw new RuntimeException('غير مصرح لك بإضافة أدوار جديدة.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ø¶Ø§ÙØ© Ø£Ø¯ÙˆØ§Ø± Ø¬Ø¯ÙŠØ¯Ø©.');
             }
             $name = post_string('name');
             $code = preg_replace('/[^a-z0-9_]/', '', strtolower(post_string('code')));
@@ -1222,22 +1222,22 @@ function handle_post(string $route, array $user): void
                         }
                         $db->commit();
                         unset($_SESSION['permissions']);
-                        flash('تم إضافة الدور الجديد بنجاح مع الصلاحيات المحددة.');
+                        flash('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø¯ÙˆØ± Ø§Ù„Ø¬Ø¯ÙŠØ¯ Ø¨Ù†Ø¬Ø§Ø­ Ù…Ø¹ Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ§Øª Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©.');
                     } else {
                         $db->rollBack();
-                        flash('كود الدور مسجل مسبقاً، يرجى اختيار كود آخر.', 'danger');
+                        flash('ÙƒÙˆØ¯ Ø§Ù„Ø¯ÙˆØ± Ù…Ø³Ø¬Ù„ Ù…Ø³Ø¨Ù‚Ø§Ù‹ØŒ ÙŠØ±Ø¬Ù‰ Ø§Ø®ØªÙŠØ§Ø± ÙƒÙˆØ¯ Ø¢Ø®Ø±.', 'danger');
                     }
                 } catch (Throwable $e) {
                     $db->rollBack();
                     throw $e;
                 }
             } else {
-                flash('اسم الدور أو الكود غير صالح.', 'danger');
+                flash('Ø§Ø³Ù… Ø§Ù„Ø¯ÙˆØ± Ø£Ùˆ Ø§Ù„ÙƒÙˆØ¯ ØºÙŠØ± ØµØ§Ù„Ø­.', 'danger');
             }
             redirect('users&tab=permissions');
         } elseif (post_string('action') === 'delete_role') {
             if (!has_permission('users_permissions')) {
-                throw new RuntimeException('غير مصرح لك بحذف الأدوار.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ø£Ø¯ÙˆØ§Ø±.');
             }
             $role_id = (int) post_string('role_id');
             $db = pdo();
@@ -1247,7 +1247,7 @@ function handle_post(string $route, array $user): void
             $count = (int) $stmt->fetchColumn();
             
             if ($count > 0) {
-                flash('لا يمكن حذف هذا الدور لوجود موظفين مسجلين به حالياً.', 'danger');
+                flash('Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ø¯ÙˆØ± Ù„ÙˆØ¬ÙˆØ¯ Ù…ÙˆØ¸ÙÙŠÙ† Ù…Ø³Ø¬Ù„ÙŠÙ† Ø¨Ù‡ Ø­Ø§Ù„ÙŠØ§Ù‹.', 'danger');
             } else {
                 $db->beginTransaction();
                 try {
@@ -1255,7 +1255,7 @@ function handle_post(string $route, array $user): void
                     $db->prepare('DELETE FROM roles WHERE id = ?')->execute([$role_id]);
                     $db->commit();
                     unset($_SESSION['permissions']);
-                    flash('تم حذف الدور بنجاح.');
+                    flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø¯ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­.');
                 } catch (Throwable $e) {
                     $db->rollBack();
                     throw $e;
@@ -1264,36 +1264,36 @@ function handle_post(string $route, array $user): void
             redirect('users&tab=permissions');
         } elseif (post_string('action') === 'deactivate') {
             if (!has_permission('users_add')) {
-                throw new RuntimeException('غير مصرح لك بتعطيل الموظفين.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø·ÙŠÙ„ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†.');
             }
             $id = (int) post_string('id');
             if ($id === (int) $user['id']) {
-                throw new RuntimeException('لا يمكن تعطيل حسابك الحالي.');
+                throw new RuntimeException('Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø·ÙŠÙ„ Ø­Ø³Ø§Ø¨Ùƒ Ø§Ù„Ø­Ø§Ù„ÙŠ.');
             }
             deactivate_user($id);
-            flash('تم تعطيل الموظف.');
+            flash('ØªÙ… ØªØ¹Ø·ÙŠÙ„ Ø§Ù„Ù…ÙˆØ¸Ù.');
         } elseif (post_string('action') === 'delete') {
             if (!has_permission('users_add')) {
-                throw new RuntimeException('غير مصرح لك بحذف الموظفين.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø­Ø°Ù Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†.');
             }
             $id = (int) post_string('id');
             if ($id === (int) $user['id']) {
-                throw new RuntimeException('لا يمكن حذف حسابك الحالي نهائياً.');
+                throw new RuntimeException('Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø­Ø°Ù Ø­Ø³Ø§Ø¨Ùƒ Ø§Ù„Ø­Ø§Ù„ÙŠ Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹.');
             }
             delete_user_permanently($id);
-            flash('تم حذف الموظف نهائياً.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ù…ÙˆØ¸Ù Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹.');
         } elseif (post_string('action') === 'update') {
             if (!has_permission('users_add')) {
-                throw new RuntimeException('غير مصرح لك بتعديل الموظفين.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…ÙˆØ¸ÙÙŠÙ†.');
             }
             update_user($_POST);
-            flash('تم تعديل بيانات الموظف.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ÙˆØ¸Ù.');
         } else {
             if (!has_permission('users_add')) {
-                throw new RuntimeException('غير مصرح لك بإضافة موظفين.');
+                throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¥Ø¶Ø§ÙØ© Ù…ÙˆØ¸ÙÙŠÙ†.');
             }
             add_user($_POST);
-            flash('تم إنشاء حساب الموظف.');
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ÙˆØ¸Ù.');
         }
     }
 
@@ -1304,24 +1304,24 @@ function handle_post(string $route, array $user): void
             $month = date('Y-m');
         }
         if (in_array($action, ['update_rates', 'add_adjustment', 'delete_adjustment', 'save_override', 'pay_salary'], true) && !has_permission('users_permissions')) {
-            throw new RuntimeException('غير مصرح لك بتعديل الرواتب.');
+            throw new RuntimeException('ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø±ÙˆØ§ØªØ¨.');
         }
 
         if ($action === 'add_adjustment') {
             add_payroll_adjustment($_POST, (int) $user['id']);
-            flash('تم تسجيل الحافز أو الخصم.');
+            flash('ØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø§ÙØ² Ø£Ùˆ Ø§Ù„Ø®ØµÙ….');
             redirect('payroll&month=' . $month);
         }
 
         if ($action === 'delete_adjustment') {
             delete_payroll_adjustment((int) post_string('id'), (int) $user['id']);
-            flash('تم حذف الحافز أو الخصم.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø­Ø§ÙØ² Ø£Ùˆ Ø§Ù„Ø®ØµÙ….');
             redirect('payroll&month=' . $month);
         }
 
         if ($action === 'save_override') {
             save_payroll_override($_POST, (int) $user['id']);
-            flash('تم حفظ إجماليات الراتب النهائية.');
+            flash('ØªÙ… Ø­ÙØ¸ Ø¥Ø¬Ù…Ø§Ù„ÙŠØ§Øª Ø§Ù„Ø±Ø§ØªØ¨ Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠØ©.');
             redirect('payroll&month=' . $month);
         }
 
@@ -1332,13 +1332,13 @@ function handle_post(string $route, array $user): void
             $db = pdo();
             $stmt = $db->prepare('UPDATE users SET basic_salary = ?, commission_percent = ? WHERE id = ?');
             $stmt->execute([$salary, $comm, $userId]);
-            flash('تم تحديث الراتب الأساسي.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø±Ø§ØªØ¨ Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ.');
             redirect('payroll&month=' . $month);
         }
 
         if ($action === 'pay_salary') {
             pay_salary($_POST, (int) $user['id']);
-            flash('✅ تم تسجيل صرف الراتب بنجاح.');
+            flash('âœ… ØªÙ… ØªØ³Ø¬ÙŠÙ„ ØµØ±Ù Ø§Ù„Ø±Ø§ØªØ¨ Ø¨Ù†Ø¬Ø§Ø­.');
             redirect('payroll&month=' . $month);
         }
     }
@@ -1346,16 +1346,16 @@ function handle_post(string $route, array $user): void
     if ($route === 'online_orders' && has_permission('online_orders')) {
         if (post_string('action') === 'status') {
             update_online_order_status((int) post_string('order_id'), post_string('status'), (int) $user['id']);
-            flash('تم تحديث حالة الطلب.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø­Ø§Ù„Ø© Ø§Ù„Ø·Ù„Ø¨.');
         } elseif (post_string('action') === 'delete') {
             delete_online_order((int) post_string('order_id'), (int) $user['id']);
-            flash('تم حذف الطلب الأونلاين.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø·Ù„Ø¨ Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ†.');
         } elseif (post_string('action') === 'update') {
             update_online_order((int) post_string('order_id'), $_POST, (int) $user['id']);
-            flash('تم تحديث طلب الأونلاين.');
+            flash('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø·Ù„Ø¨ Ø§Ù„Ø£ÙˆÙ†Ù„Ø§ÙŠÙ†.');
         } else {
             create_online_order($_POST, (int) $user['id']);
-            flash('تم إنشاء طلب أونلاين.');
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø·Ù„Ø¨ Ø£ÙˆÙ†Ù„Ø§ÙŠÙ†.');
         }
         redirect('online_orders');
     }
@@ -1364,16 +1364,16 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'update') {
             update_location_data($_POST, (int) $user['id']);
-            flash('تم تعديل بيانات الفرع/الموقع.');
+            flash('ØªÙ… ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ÙØ±Ø¹/Ø§Ù„Ù…ÙˆÙ‚Ø¹.');
         } elseif ($action === 'deactivate') {
             set_location_active((int) post_string('id'), false, (int) $user['id']);
-            flash('تم تعطيل الفرع/الموقع.');
+            flash('ØªÙ… ØªØ¹Ø·ÙŠÙ„ Ø§Ù„ÙØ±Ø¹/Ø§Ù„Ù…ÙˆÙ‚Ø¹.');
         } elseif ($action === 'activate') {
             set_location_active((int) post_string('id'), true, (int) $user['id']);
-            flash('تم تفعيل الفرع/الموقع.');
+            flash('ØªÙ… ØªÙØ¹ÙŠÙ„ Ø§Ù„ÙØ±Ø¹/Ø§Ù„Ù…ÙˆÙ‚Ø¹.');
         } else {
             add_location($_POST, (int) $user['id']);
-            flash('تم إضافة الفرع/الموقع.');
+            flash('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„ÙØ±Ø¹/Ø§Ù„Ù…ÙˆÙ‚Ø¹.');
         }
         redirect('locations');
     }
@@ -1382,40 +1382,40 @@ function handle_post(string $route, array $user): void
         $action = post_string('action');
         if ($action === 'reset') {
             reset_database();
-            flash('تم تفريغ البيانات وإعادة تهيئة النظام من البداية. بيانات الدخول الافتراضية: admin / admin123');
+            flash('ØªÙ… ØªÙØ±ÙŠØº Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙˆØ¥Ø¹Ø§Ø¯Ø© ØªÙ‡ÙŠØ¦Ø© Ø§Ù„Ù†Ø¸Ø§Ù… Ù…Ù† Ø§Ù„Ø¨Ø¯Ø§ÙŠØ©. Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø§Ù„Ø§ÙØªØ±Ø§Ø¶ÙŠØ©: admin / admin123');
         } elseif ($action === 'restore') {
             if (isset($_FILES['sql_file']) && $_FILES['sql_file']['error'] === UPLOAD_ERR_OK) {
                 $sql = file_get_contents($_FILES['sql_file']['tmp_name']);
                 if ($sql) {
-                    // إزالة الكلمات غير المدعومة في MySQL 8+ باستخدام regex لضمان التقاط كل المسافات
+                    // Ø¥Ø²Ø§Ù„Ø© Ø§Ù„ÙƒÙ„Ù…Ø§Øª ØºÙŠØ± Ø§Ù„Ù…Ø¯Ø¹ÙˆÙ…Ø© ÙÙŠ MySQL 8+ Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… regex Ù„Ø¶Ù…Ø§Ù† Ø§Ù„ØªÙ‚Ø§Ø· ÙƒÙ„ Ø§Ù„Ù…Ø³Ø§ÙØ§Øª
                     $sql = preg_replace('/DEFAULT\s+(CURRENT_DATE|curdate\(\))/i', '', $sql);
                     
                     $db = pdo(true);
-                    // تعطيل القواعد الصارمة مؤقتاً لتمرير التواريخ القديمة مثل 0000-00-00
+                    // ØªØ¹Ø·ÙŠÙ„ Ø§Ù„Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„ØµØ§Ø±Ù…Ø© Ù…Ø¤Ù‚ØªØ§Ù‹ Ù„ØªÙ…Ø±ÙŠØ± Ø§Ù„ØªÙˆØ§Ø±ÙŠØ® Ø§Ù„Ù‚Ø¯ÙŠÙ…Ø© Ù…Ø«Ù„ 0000-00-00
                     $db->exec("SET sql_mode = '';");
                     $db->exec('SET FOREIGN_KEY_CHECKS=0;');
                     try {
                         $db->exec($sql);
                         log_audit((int) $user['id'], 'restore', 'database', null, 'Restored from uploaded file');
-                        flash('تم استرجاع قاعدة البيانات بنجاح.');
+                        flash('ØªÙ… Ø§Ø³ØªØ±Ø¬Ø§Ø¹ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø¨Ù†Ø¬Ø§Ø­.');
                     } catch (Throwable $e) {
-                        flash('حدث خطأ أثناء الاسترجاع: ' . $e->getMessage(), 'danger');
+                        flash('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø§Ø³ØªØ±Ø¬Ø§Ø¹: ' . $e->getMessage(), 'danger');
                     }
                     $db->exec('SET FOREIGN_KEY_CHECKS=1');
                 }
             } else {
-                flash('لم يتم رفع ملف صالح.', 'danger');
+                flash('Ù„Ù… ÙŠØªÙ… Ø±ÙØ¹ Ù…Ù„Ù ØµØ§Ù„Ø­.', 'danger');
             }
         } else {
             $file = backup_database((int) $user['id']);
-            flash('تم إنشاء نسخة احتياطية: ' . basename($file));
+            flash('ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù†Ø³Ø®Ø© Ø§Ø­ØªÙŠØ§Ø·ÙŠØ©: ' . basename($file));
         }
         redirect('backup');
     }
 
     if ($route === 'settings' && has_permission('settings')) {
         update_settings($_POST, (int) $user['id']);
-        flash('تم حفظ إعدادات النظام.');
+        flash('ØªÙ… Ø­ÙØ¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ù†Ø¸Ø§Ù….');
         redirect('settings');
     }
 
@@ -1427,12 +1427,12 @@ function handle_post(string $route, array $user): void
             $urgency = post_string('urgency', 'important');
             $content = post_string('content');
             create_system_update($title, $content, $version, $urgency, (int) $user['id']);
-            flash('🚀 تم نشر التحديث بنجاح وبث التنبيه لجميع الشاشات المفتوحة فوراً.');
+            flash('ðŸš€ ØªÙ… Ù†Ø´Ø± Ø§Ù„ØªØ­Ø¯ÙŠØ« Ø¨Ù†Ø¬Ø§Ø­ ÙˆØ¨Ø« Ø§Ù„ØªÙ†Ø¨ÙŠÙ‡ Ù„Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø´Ø§Ø´Ø§Øª Ø§Ù„Ù…ÙØªÙˆØ­Ø© ÙÙˆØ±Ø§Ù‹.');
             redirect('system_updates');
         } elseif ($action === 'delete_update') {
             $id = (int) post_string('id');
             delete_system_update($id, (int) $user['id']);
-            flash('تم حذف التحديث من السجل.');
+            flash('ØªÙ… Ø­Ø°Ù Ø§Ù„ØªØ­Ø¯ÙŠØ« Ù…Ù† Ø§Ù„Ø³Ø¬Ù„.');
             redirect('system_updates');
         }
     }
@@ -1441,13 +1441,14 @@ function handle_post(string $route, array $user): void
 function render_page(string $route, array $user): void
 {
     $allowed = all_routes();
+    $allowed[] = 'products_bulk_add';
 
     if (!in_array($route, $allowed, true) && $route !== 'call_center') {
         $route = 'dashboard';
     }
 
     if (!has_permission($route)) {
-        echo '<div class="alert danger">غير مصرح لك بدخول هذه الصفحة.</div>';
+        echo '<div class="alert danger">ØºÙŠØ± Ù…ØµØ±Ø­ Ù„Ùƒ Ø¨Ø¯Ø®ÙˆÙ„ Ù‡Ø°Ù‡ Ø§Ù„ØµÙØ­Ø©.</div>';
         return;
     }
 
@@ -1458,5 +1459,6 @@ function render_page(string $route, array $user): void
 
     require $file;
 }
+
 
 
