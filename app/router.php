@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
@@ -107,12 +107,14 @@ function handle_ajax_requests(string $route): void
         header('Content-Type: application/json; charset=utf-8');
         try {
             $json = file_get_contents('php://input');
-            $data = json_decode($json, true) ?? [];
+            $data = json_decode($json, true);
+            if (!$data) $data = [];
             if (empty($data['products']) || !is_array($data['products'])) {
                 throw new Exception('لا توجد منتجات للإضافة');
             }
 
-            db_begin_transaction();
+            $db = pdo();
+            $db->beginTransaction();
             foreach ($data['products'] as $p) {
                 $type = (string)($p['type'] ?? '');
                 $name = trim((string)($p['name'] ?? ''));
@@ -126,27 +128,27 @@ function handle_ajax_requests(string $route): void
                     $costPrice = (float)($p['cost_price'] ?? 0);
                     $barcode = trim((string)($p['barcode'] ?? ''));
                     
-                    if (!$barcode && $type === 'fixed') {
-                        $barcode = generate_product_barcode();
-                    } elseif (!$barcode) {
-                        $barcode = generate_unique_ean13(pdo());
+                    if (!$barcode) {
+                        $barcode = generate_unique_ean13($db);
                     }
                     
                     $fullName = $name;
                     if ($size > 0 && $type === 'bottle') $fullName .= " ($size ml)";
                     if ($size > 0 && $type === 'fixed') $fullName .= " ($size)";
 
-                    $productId = db_insert('products', [
-                        'name' => $fullName,
-                        'type' => $type,
-                        'unit' => 'unit',
-                        'min_stock' => $minStock,
-                        'sale_price' => $salePrice,
-                        'cost_price' => $costPrice > 0 ? $costPrice : null,
-                        'barcode' => $barcode ?: null
+                    $stmt = $db->prepare('INSERT INTO products (name, type, unit, min_stock, sale_price, cost_price, barcode) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([
+                        $fullName,
+                        $type,
+                        'unit',
+                        $minStock,
+                        $salePrice,
+                        $costPrice > 0 ? $costPrice : null,
+                        $barcode
                     ]);
+                    $productId = (int)$db->lastInsertId();
                     
-                    save_product_details(pdo(), $productId, $type, ['size_ml' => $size > 0 ? $size : null]);
+                    save_product_details($db, $productId, $type, ['size_ml' => $size > 0 ? $size : null]);
                 } else if ($type === 'perfume_gram') {
                     $quota = trim((string)($p['quota'] ?? ''));
                     $salePrice = (float)($p['sale_price'] ?? 0); 
@@ -158,20 +160,22 @@ function handle_ajax_requests(string $route): void
                     $fullName = $name;
                     if ($quota !== '') $fullName .= " - $quota";
                     
-                    $barcode = generate_unique_ean13(pdo());
+                    $barcode = generate_unique_ean13($db);
                     
-                    $productId = db_insert('products', [
-                        'name' => $fullName,
-                        'type' => $type,
-                        'unit' => 'gram',
-                        'min_stock' => $minStock,
-                        'sale_price' => $pricePerGram, // fallback to gram price
-                        'cost_price' => $costPrice > 0 ? $costPrice : null,
-                        'barcode' => $barcode,
-                        'sku' => $quota !== '' ? $quota : null
+                    $stmt = $db->prepare('INSERT INTO products (name, type, unit, min_stock, sale_price, cost_price, barcode, sku) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([
+                        $fullName,
+                        $type,
+                        'gram',
+                        $minStock,
+                        $pricePerGram, 
+                        $costPrice > 0 ? $costPrice : null,
+                        $barcode,
+                        $quota !== '' ? $quota : null
                     ]);
+                    $productId = (int)$db->lastInsertId();
                     
-                    save_product_details(pdo(), $productId, $type, [
+                    save_product_details($db, $productId, $type, [
                         'perfume_family' => $family ?: null,
                         'quality_grade' => $quality ?: null,
                         'price_per_gram' => $pricePerGram
@@ -180,11 +184,13 @@ function handle_ajax_requests(string $route): void
             }
             $user = current_user();
             log_audit($user ? (int)$user['id'] : null, 'create', 'product', null, 'إضافة سريعة متعددة (' . count($data['products']) . ')');
-            db_commit();
+            $db->commit();
             
             echo json_encode(['success' => true]);
         } catch (Throwable $e) {
-            db_rollback();
+            if (isset($db) && $db->inTransaction()) {
+                $db->rollBack();
+            }
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
