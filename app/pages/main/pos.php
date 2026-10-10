@@ -1140,12 +1140,13 @@ option.low-stock {
 
             <!-- Tab Content 3: Instant Mix (تركيبة فورية) -->
             <div id="add-mix-panel" class="grid-form" style="display: none;">
-                <div style="grid-column: span 2; display: flex; justify-content: flex-end; margin-bottom: 5px;">
-                    <button type="button" class="btn small" onclick="openOffOrderModal()" style="background: var(--surface-soft); color: var(--gold-dark); border: 1px solid var(--gold); border-radius: 8px; font-weight: 800; font-size: 12px; padding: 6px 12px;">
-                        🔄 استدعاء تركيبة مرتجعة (Off Order)
-                    </button>
-                </div>
-                <label style="grid-column: span 2;">نوع الزجاجة المستخدمة
+                <label style="grid-column: span 2;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span>نوع الزجاجة المستخدمة</span>
+                        <button type="button" class="btn small" onclick="openOffOrderModal()" style="background: var(--surface-soft); color: var(--gold-dark); border: 1px solid var(--gold); border-radius: 6px; font-weight: 800; font-size: 11px; padding: 4px 8px; cursor: pointer;">
+                            🔄 استدعاء مرتجع (Off Order)
+                        </button>
+                    </div>
                     <select id="mix_bottle_id">
                         <option value="">-- اختر الزجاجة --</option>
                         <option value="no_bottle" data-price="0" data-size="0">بدون زجاجة (0.00 ج.م)</option>
@@ -1155,7 +1156,7 @@ option.low-stock {
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label>سعر البيع الإجمالي للتركيبة
+                <label style="grid-column: span 2;">سعر البيع الإجمالي للتركيبة
                     <input id="mix_sale_price" type="number" step="1" min="0" placeholder="اكتب السعر النهائي" data-manual="0" oninput="markMixPriceManual(); recalculateTotals()">
                 </label>
                 <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; margin-top: 4px; margin-bottom: 4px; gap: 8px; flex-wrap: wrap;">
@@ -5670,4 +5671,5 @@ function closeOffOrderModal() {
     document.getElementById('off-order-modal').classList.remove('show');
 }
 </script>
+
 
