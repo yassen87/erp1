@@ -2941,9 +2941,10 @@ function create_return_invoice(int $invoiceId, string $method, string $reason, i
 function get_invoice_line_components(int $lineId): array
 {
     $stmt = pdo()->prepare('
-        SELECT c.*, p.name, p.type, p.price_per_gram, p.sale_price 
+        SELECT c.*, p.name, p.type, p.sale_price, ppd.price_per_gram 
         FROM invoice_line_components c 
         JOIN products p ON p.id = c.component_product_id 
+        LEFT JOIN product_perfume_details ppd ON ppd.product_id = p.id
         WHERE c.invoice_line_id = ?
     ');
     $stmt->execute([$lineId]);
