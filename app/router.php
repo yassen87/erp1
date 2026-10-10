@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 declare(strict_types=1);
 
@@ -84,13 +84,21 @@ function handle_ajax_requests(string $route): void
     if ($route === 'api_get_off_orders') {
         require_login();
         header('Content-Type: application/json; charset=utf-8');
-        $locationId = (int)($_GET['location_id'] ?? current_user()['location_id'] ?? 0);
-        $formulas = get_off_order_formulas($locationId);
-        foreach ($formulas as &$f) {
-            $f['components'] = get_invoice_line_components((int)$f['id']);
+        try {
+            $user = current_user();
+            $loc = isset($user['location_id']) ? $user['location_id'] : 0;
+            $locationId = (int)($_GET['location_id'] ?? $loc);
+            
+            $formulas = get_off_order_formulas($locationId);
+            foreach ($formulas as &$f) {
+                $f['components'] = get_invoice_line_components((int)$f['id']);
+            }
+            unset($f);
+            
+            echo json_encode(['success' => true, 'formulas' => $formulas]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
-        unset($f);
-        echo json_encode(['success' => true, 'formulas' => $formulas]);
         exit;
     }
 
