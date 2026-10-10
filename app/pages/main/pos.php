@@ -1140,6 +1140,11 @@ option.low-stock {
 
             <!-- Tab Content 3: Instant Mix (تركيبة فورية) -->
             <div id="add-mix-panel" class="grid-form" style="display: none;">
+                <div style="grid-column: span 2; display: flex; justify-content: flex-end; margin-bottom: 5px;">
+                    <button type="button" class="btn small" onclick="openOffOrderModal()" style="background: var(--surface-soft); color: var(--gold-dark); border: 1px solid var(--gold); border-radius: 8px; font-weight: 800; font-size: 12px; padding: 6px 12px;">
+                        🔄 استدعاء تركيبة مرتجعة (Off Order)
+                    </button>
+                </div>
                 <label style="grid-column: span 2;">نوع الزجاجة المستخدمة
                     <select id="mix_bottle_id">
                         <option value="">-- اختر الزجاجة --</option>
@@ -5540,68 +5545,129 @@ document.addEventListener('keydown', function(e) {
     </div>
 </div>
 
-<?php if (isset($_GET['load_off_order'])): ?>
-<?php 
-    $offOrderId = (int)$_GET['load_off_order'];
-    $components = get_invoice_line_components($offOrderId);
-    $bottle = null;
-    $oils = [];
-    $totalPrice = 0;
-    foreach ($components as $c) {
-        if ($c['type'] === 'bottle') {
-            $bottle = $c;
-            $totalPrice += (float)$c['sale_price'];
-        } else if ($c['type'] === 'perfume_gram') {
-            $oils[] = [
-                'perfume_id' => (int)$c['component_product_id'],
-                'perfume_name' => $c['name'],
-                'grams' => (float)$c['quantity'],
-                'price_per_gram' => (float)$c['price_per_gram']
-            ];
-            $totalPrice += (float)$c['quantity'] * (float)$c['price_per_gram'];
-        }
-    }
-?>
+
+
+<!-- Modal Off Order -->
+<div id="off-order-modal" class="october-modal">
+    <div class="october-modal-card" style="max-width: 600px;">
+        <div class="october-modal-header">
+            <h3 style="margin: 0; font-size: 16px; color: var(--gold-light); display: flex; align-items: center; gap: 8px;">
+                🔄 اختيار تركيبة مرتجعة (Off Order)
+            </h3>
+            <button type="button" class="october-modal-close" onclick="closeOffOrderModal()">&times;</button>
+        </div>
+        <div class="october-modal-body" style="flex-direction: column; align-items: stretch; padding: 16px; max-height: 70vh; overflow-y: auto; background: var(--surface);">
+            <div id="off-order-list-container">
+                <div style="text-align: center; color: var(--muted); padding: 20px;">جاري التحميل...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const offOils = <?= json_encode($oils) ?>;
-        if (offOils.length === 0) return;
+window.offOrderDataCache = [];
+
+function openOffOrderModal() {
+    document.getElementById('off-order-modal').classList.add('show');
+    document.getElementById('off-order-list-container').innerHTML = '<div style="text-align: center; color: var(--muted); padding: 20px;">جاري التحميل... ⏳</div>';
+    
+    fetch('index.php?r=api_get_off_orders')
+    .then(res => res.json())
+    .then(data => {
+        if (!data.success) return alert(data.message || 'خطأ في تحميل المرتجعات');
         
-        const mix = {
-            type: 'custom_recipe',
-            name: 'تركيبة جاهزة (مرتجع)',
-            components: offOils.map(o => ({
-                product_id: o.perfume_id,
-                name: o.perfume_name,
-                type: 'perfume_gram',
-                price_per_gram: o.price_per_gram,
-                quantity: o.grams,
-                cost: o.grams * o.price_per_gram
-            })),
-            bottle_id: <?= $bottle ? $bottle['component_product_id'] : "'no_bottle'" ?>,
-            without_bottle: <?= $bottle ? 'false' : 'true' ?>,
-            qty: 1,
-            price: <?= $totalPrice ?>,
-            discountType: '',
-            discountValue: 0,
-            is_off_order: true
-        };
-        
-        if (mix.bottle_id !== 'no_bottle') {
-            mix.components.push({
-                product_id: mix.bottle_id,
-                name: <?= json_encode($bottle['name'] ?? 'زجاجة') ?>,
-                type: 'bottle',
-                price_per_gram: 0,
-                quantity: 1,
-                cost: <?= $bottle ? (float)$bottle['sale_price'] : 0 ?>
+        let html = '';
+        if (data.formulas.length === 0) {
+            html = '<div style="padding: 20px; text-align: center; color: var(--muted);">لا توجد تركيبات مرتجعة (Off Orders) حالياً في هذا الفرع.</div>';
+        } else {
+            html = '<div style="display: grid; gap: 10px;">';
+            data.formulas.forEach(f => {
+                const totalGrams = f.components.reduce((sum, c) => c.type === 'perfume_gram' ? sum + parseFloat(c.quantity) : sum, 0);
+                const bottle = f.components.find(c => c.type === 'bottle');
+                const bName = bottle ? bottle.name : 'بدون زجاجة';
+                
+                html += `<div class="customer-inv-card" onclick="loadOffOrderIntoMixBuilder(${f.id})" style="cursor:pointer; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid var(--gold); background: var(--surface); padding: 12px; border-radius: 8px; transition: 0.2s;">
+                    <div>
+                        <strong style="color: var(--gold-dark); font-size: 14px;">تركيبة مرتجعة من فاتورة #${f.invoice_number}</strong>
+                        <div style="font-size: 11.5px; color: var(--muted); margin-top: 4px;">🍾 ${bName} &nbsp;|&nbsp; 💧 ${totalGrams} جرام زيت</div>
+                    </div>
+                    <div style="text-align: left;">
+                        <strong style="font-size: 16px; color: #16a34a; font-weight: 900;">${parseFloat(f.line_total).toFixed(2)} ج.م</strong>
+                        <div style="font-size: 10px; color: var(--muted); margin-top: 2px;">${f.invoice_date.split(' ')[0]}</div>
+                    </div>
+                </div>`;
             });
+            html += '</div>';
         }
         
-        cart.push(mix);
-        renderCart();
-        alert('✅ تم تحميل التركيبة المرتجعة إلى الكاشير بنجاح!\nيمكنك تعديل كميات الزيت أو إضافة مكونات أخرى قبل الإغلاق.');
+        document.getElementById('off-order-list-container').innerHTML = html;
+        window.offOrderDataCache = data.formulas;
+    })
+    .catch(err => {
+        document.getElementById('off-order-list-container').innerHTML = '<div style="color: red; text-align: center; padding: 20px;">فشل الاتصال بالخادم.</div>';
     });
+}
+
+function loadOffOrderIntoMixBuilder(offOrderId) {
+    const f = window.offOrderDataCache.find(x => parseInt(x.id) === parseInt(offOrderId));
+    if (!f) return;
+    
+    closeOffOrderModal();
+    
+    let bottle = f.components.find(c => c.type === 'bottle');
+    let oils = f.components.filter(c => c.type === 'perfume_gram');
+    let totalPrice = parseFloat(f.line_total);
+
+    // 1. Set Bottle
+    const mixBottleSelect = document.getElementById('mix_bottle_id');
+    const bottleId = bottle ? bottle.component_product_id : 'no_bottle';
+    if (mixBottleSelect) {
+        mixBottleSelect.value = bottleId;
+        if (typeof refreshSearchableSelect === 'function') refreshSearchableSelect(mixBottleSelect);
+    }
+
+    // 2. Clear existing oils and add the new ones
+    const container = document.getElementById('mix-perfumes-container');
+    if (container) {
+        const rows = container.querySelectorAll('.mix-perfume-row');
+        for (let i = 1; i < rows.length; i++) rows[i].remove();
+        
+        oils.forEach((oil, index) => {
+            let row;
+            if (index === 0) {
+                row = container.querySelector('.mix-perfume-row');
+            } else {
+                if (typeof addOilRow === 'function') addOilRow();
+                const newRows = container.querySelectorAll('.mix-perfume-row');
+                row = newRows[newRows.length - 1];
+            }
+            
+            if (row) {
+                const select = row.querySelector('select[name="mix_perfume_id[]"]');
+                const input = row.querySelector('input[name="mix_grams[]"]');
+                if (select) {
+                    select.value = oil.component_product_id;
+                    if (typeof refreshSearchableSelect === 'function') refreshSearchableSelect(select);
+                }
+                if (input) {
+                    input.value = parseFloat(oil.quantity);
+                }
+            }
+        });
+    }
+
+    // 3. Set Price
+    const priceInput = document.getElementById('mix_sale_price');
+    if (priceInput) {
+        priceInput.value = Math.round(totalPrice);
+        priceInput.dataset.manual = "1";
+    }
+    
+    if (typeof calculateSuggestedMixPrice === 'function') calculateSuggestedMixPrice();
+}
+
+function closeOffOrderModal() {
+    document.getElementById('off-order-modal').classList.remove('show');
+}
 </script>
-<?php endif; ?>
 
