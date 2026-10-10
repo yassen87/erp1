@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $locations = sale_locations();
 $userLocationId = current_user_location_id();
 if ($userLocationId !== null) {
@@ -5604,3 +5604,4 @@ document.addEventListener('keydown', function(e) {
     });
 </script>
 <?php endif; ?>
+
