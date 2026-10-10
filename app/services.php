@@ -2938,6 +2938,47 @@ function create_return_invoice(int $invoiceId, string $method, string $reason, i
     }
 }
 
+function get_invoice_line_components(int $lineId): array
+{
+    $stmt = pdo()->prepare('
+        SELECT c.*, p.name, p.type, p.price_per_gram, p.sale_price 
+        FROM invoice_line_components c 
+        JOIN products p ON p.id = c.component_product_id 
+        WHERE c.invoice_line_id = ?
+    ');
+    $stmt->execute([$lineId]);
+    return $stmt->fetchAll();
+}
+
+function get_off_order_formulas(?int $locationId = null): array
+{
+    $db = pdo();
+    $sql = "
+        SELECT il.*, i.invoice_number, i.location_id, i.created_at AS invoice_date, l.name AS location_name
+        FROM invoice_lines il
+        JOIN invoices i ON i.id = il.invoice_id
+        LEFT JOIN locations l ON l.id = i.location_id
+        WHERE il.line_type IN ('custom_recipe', 'saved_recipe')
+          AND (
+              i.status = 'void_future'
+              OR EXISTS (
+                  SELECT 1 FROM return_invoices ri 
+                  WHERE ri.original_invoice_id = i.id 
+                    AND ri.return_number LIKE CONCAT('RT-L-%-', il.id)
+              )
+          )
+    ";
+    $params = [];
+    if ($locationId) {
+        $sql .= " AND i.location_id = ?";
+        $params[] = $locationId;
+    }
+    $sql .= " ORDER BY i.created_at DESC LIMIT 200";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
 function recent_returnable_lines(): array
 {
     return pdo()->query("SELECT il.id AS line_id, il.description, il.line_total, i.invoice_number, i.created_at, c.name AS customer_name FROM invoice_lines il JOIN invoices i ON i.id = il.invoice_id LEFT JOIN customers c ON c.id = i.customer_id WHERE i.status = 'completed' ORDER BY i.created_at DESC, il.id DESC LIMIT 150")->fetchAll();

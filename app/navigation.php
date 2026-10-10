@@ -38,6 +38,7 @@ function nav_sections(): array
                 ['route' => 'transfers_branch_create', 'label' => 'إنشاء تحويل جديد', 'hidden' => true],
                 ['route' => 'transfers',               'label' => 'تحويلات المخزون القديم', 'hidden' => true],
                 ['route' => 'returns',                 'label' => 'المرتجعات'],
+                ['route' => 'off_orders',              'label' => 'المرتجعات الجاهزة (Off Order)'],
                 ['route' => 'waste',                   'label' => 'الهالك والتالف'],
                 ['route' => 'print_barcode',           'label' => 'طباعة الباركود', 'hidden' => true],
             ],

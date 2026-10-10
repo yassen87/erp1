@@ -5540,3 +5540,67 @@ document.addEventListener('keydown', function(e) {
     </div>
 </div>
 
+<?php if (isset($_GET['load_off_order'])): ?>
+<?php 
+    $offOrderId = (int)$_GET['load_off_order'];
+    $components = get_invoice_line_components($offOrderId);
+    $bottle = null;
+    $oils = [];
+    $totalPrice = 0;
+    foreach ($components as $c) {
+        if ($c['type'] === 'bottle') {
+            $bottle = $c;
+            $totalPrice += (float)$c['sale_price'];
+        } else if ($c['type'] === 'perfume_gram') {
+            $oils[] = [
+                'perfume_id' => (int)$c['component_product_id'],
+                'perfume_name' => $c['name'],
+                'grams' => (float)$c['quantity'],
+                'price_per_gram' => (float)$c['price_per_gram']
+            ];
+            $totalPrice += (float)$c['quantity'] * (float)$c['price_per_gram'];
+        }
+    }
+?>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const offOils = <?= json_encode($oils) ?>;
+        if (offOils.length === 0) return;
+        
+        const mix = {
+            type: 'custom_recipe',
+            name: 'تركيبة جاهزة (مرتجع)',
+            components: offOils.map(o => ({
+                product_id: o.perfume_id,
+                name: o.perfume_name,
+                type: 'perfume_gram',
+                price_per_gram: o.price_per_gram,
+                quantity: o.grams,
+                cost: o.grams * o.price_per_gram
+            })),
+            bottle_id: <?= $bottle ? $bottle['component_product_id'] : "'no_bottle'" ?>,
+            without_bottle: <?= $bottle ? 'false' : 'true' ?>,
+            qty: 1,
+            price: <?= $totalPrice ?>,
+            discountType: '',
+            discountValue: 0,
+            is_off_order: true
+        };
+        
+        if (mix.bottle_id !== 'no_bottle') {
+            mix.components.push({
+                product_id: mix.bottle_id,
+                name: <?= json_encode($bottle['name'] ?? 'زجاجة') ?>,
+                type: 'bottle',
+                price_per_gram: 0,
+                quantity: 1,
+                cost: <?= $bottle ? (float)$bottle['sale_price'] : 0 ?>
+            });
+        }
+        
+        cart.push(mix);
+        renderCart();
+        alert('✅ تم تحميل التركيبة المرتجعة إلى الكاشير بنجاح!\nيمكنك تعديل كميات الزيت أو إضافة مكونات أخرى قبل الإغلاق.');
+    });
+</script>
+<?php endif; ?>
