@@ -9,7 +9,10 @@ unset($qualityLabels['']);
         <h2>➕ إضافة منتج جديد</h2>
         <p>كل حجم أو كوتة يتم إنشاؤها كمنتج مستقل وله باركود خاص وسعر بيع وشراء مستقل.</p>
     </div>
-    <a class="btn" href="index.php?r=products">← رجوع للمنتجات</a>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="btn success" href="index.php?r=products_bulk_add">⚡ إضافة على السريع</a>
+        <a class="btn" href="index.php?r=products">← رجوع للمنتجات</a>
+    </div>
 </section>
 
 <form class="product-create-layout" method="post" id="product-create-form">

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 declare(strict_types=1);
 
@@ -97,6 +97,94 @@ function handle_ajax_requests(string $route): void
             
             echo json_encode(['success' => true, 'formulas' => $formulas]);
         } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($route === 'api_products_quick_add' && has_permission('products_add')) {
+        require_login();
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $json = file_get_contents('php://input');
+            $data = json_decode($json, true) ?? [];
+            if (empty($data['products']) || !is_array($data['products'])) {
+                throw new Exception('لا توجد منتجات للإضافة');
+            }
+
+            db_begin_transaction();
+            foreach ($data['products'] as $p) {
+                $type = (string)($p['type'] ?? '');
+                $name = trim((string)($p['name'] ?? ''));
+                if (!$name || !$type) continue;
+                
+                $minStock = (float)($p['min_stock'] ?? 0);
+                
+                if ($type === 'bottle' || $type === 'fixed') {
+                    $size = (float)($p['size'] ?? 0);
+                    $salePrice = (float)($p['sale_price'] ?? 0);
+                    $costPrice = (float)($p['cost_price'] ?? 0);
+                    $barcode = trim((string)($p['barcode'] ?? ''));
+                    
+                    if (!$barcode && $type === 'fixed') {
+                        $barcode = generate_product_barcode();
+                    } elseif (!$barcode) {
+                        $barcode = generate_unique_ean13(pdo());
+                    }
+                    
+                    $fullName = $name;
+                    if ($size > 0 && $type === 'bottle') $fullName .= " ($size ml)";
+                    if ($size > 0 && $type === 'fixed') $fullName .= " ($size)";
+
+                    $productId = db_insert('products', [
+                        'name' => $fullName,
+                        'type' => $type,
+                        'unit' => 'unit',
+                        'min_stock' => $minStock,
+                        'sale_price' => $salePrice,
+                        'cost_price' => $costPrice > 0 ? $costPrice : null,
+                        'barcode' => $barcode ?: null
+                    ]);
+                    
+                    save_product_details(pdo(), $productId, $type, ['size_ml' => $size > 0 ? $size : null]);
+                } else if ($type === 'perfume_gram') {
+                    $quota = trim((string)($p['quota'] ?? ''));
+                    $salePrice = (float)($p['sale_price'] ?? 0); 
+                    $costPrice = (float)($p['cost_price'] ?? 0);
+                    $pricePerGram = (float)($p['price_per_gram'] ?? 0);
+                    $family = trim((string)($p['family'] ?? ''));
+                    $quality = trim((string)($p['quality'] ?? ''));
+                    
+                    $fullName = $name;
+                    if ($quota !== '') $fullName .= " - $quota";
+                    
+                    $barcode = generate_unique_ean13(pdo());
+                    
+                    $productId = db_insert('products', [
+                        'name' => $fullName,
+                        'type' => $type,
+                        'unit' => 'gram',
+                        'min_stock' => $minStock,
+                        'sale_price' => $pricePerGram, // fallback to gram price
+                        'cost_price' => $costPrice > 0 ? $costPrice : null,
+                        'barcode' => $barcode,
+                        'sku' => $quota !== '' ? $quota : null
+                    ]);
+                    
+                    save_product_details(pdo(), $productId, $type, [
+                        'perfume_family' => $family ?: null,
+                        'quality_grade' => $quality ?: null,
+                        'price_per_gram' => $pricePerGram
+                    ]);
+                }
+            }
+            $user = current_user();
+            log_audit($user ? (int)$user['id'] : null, 'create', 'product', null, 'إضافة سريعة متعددة (' . count($data['products']) . ')');
+            db_commit();
+            
+            echo json_encode(['success' => true]);
+        } catch (Throwable $e) {
+            db_rollback();
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
@@ -1364,4 +1452,5 @@ function render_page(string $route, array $user): void
 
     require $file;
 }
+
 
