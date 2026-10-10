@@ -121,6 +121,9 @@ function page_path_for_route(string $route): ?string
     if ($route === 'call_center') {
         return __DIR__ . '/pages/people/call_center.php';
     }
+    if ($route === 'products_bulk_add') {
+        return __DIR__ . '/pages/catalog/products_bulk_add.php';
+    }
     foreach (nav_sections() as $section) {
         foreach ($section['items'] as $item) {
             if ($item['route'] === $route) {
