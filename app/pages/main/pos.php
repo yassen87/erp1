@@ -1140,10 +1140,10 @@ option.low-stock {
 
             <!-- Tab Content 3: Instant Mix (تركيبة فورية) -->
             <div id="add-mix-panel" class="grid-form" style="display: none;">
-                <label style="grid-column: span 2;">
+                <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 7px; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <span>نوع الزجاجة المستخدمة</span>
-                        <button type="button" class="btn small" onclick="openOffOrderModal()" style="background: var(--surface-soft); color: var(--gold-dark); border: 1px solid var(--gold); border-radius: 6px; font-weight: 800; font-size: 11px; padding: 4px 8px; cursor: pointer;">
+                        <label for="mix_bottle_id" style="font-size: 12.5px; font-weight: 800; color: var(--gold-dark); margin: 0; cursor: pointer;">نوع الزجاجة المستخدمة</label>
+                        <button type="button" class="btn small" onclick="event.preventDefault(); event.stopPropagation(); openOffOrderModal()" style="background: var(--surface-soft); color: var(--gold-dark); border: 1px solid var(--gold); border-radius: 6px; font-weight: 800; font-size: 11px; padding: 4px 8px; cursor: pointer;">
                             🔄 استدعاء مرتجع (Off Order)
                         </button>
                     </div>
@@ -1155,7 +1155,7 @@ option.low-stock {
                             <option value="<?= e($b['id']) ?>" data-price="<?= e($b['sale_price']) ?>" data-size="<?= e($b['size_ml']) ?>"><?= e($b['name']) ?> (<?= e($b['size_ml']) ?>ml) - (<?= money($b['sale_price']) ?>)</option>
                         <?php endforeach; ?>
                     </select>
-                </label>
+                </div>
                 <label style="grid-column: span 2;">سعر البيع الإجمالي للتركيبة
                     <input id="mix_sale_price" type="number" step="1" min="0" placeholder="اكتب السعر النهائي" data-manual="0" oninput="markMixPriceManual(); recalculateTotals()">
                 </label>

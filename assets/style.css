@@ -1699,8 +1699,9 @@ code,
   position: relative;
 }
 
-/* رفع z-index للـ label المحتوي على select مفتوح */
-.grid-form label:has(.custom-select-wrapper.open) {
+/* رفع z-index للـ label أو div المحتوي على select مفتوح */
+.grid-form label:has(.custom-select-wrapper.open),
+.grid-form div:has(.custom-select-wrapper.open) {
   z-index: 10001 !important;
   position: relative;
 }
@@ -1712,12 +1713,14 @@ code,
 }
 
 /* منع عناصر الـ grid اللاحقة من تغطية الـ dropdown */
-.grid-form label {
+.grid-form label,
+.grid-form div {
   position: relative;
   z-index: 1;
 }
 
-.grid-form label:has(.custom-select-wrapper.open) {
+.grid-form label:has(.custom-select-wrapper.open),
+.grid-form div:has(.custom-select-wrapper.open) {
   z-index: 99999 !important;
 }
 
