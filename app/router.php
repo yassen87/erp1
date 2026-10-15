@@ -1414,8 +1414,41 @@ function handle_post(string $route, array $user): void
     }
 
     if ($route === 'settings' && has_permission('settings')) {
+        $logoUpdated = false;
+        if (!empty($_FILES['whatsapp_logo']['tmp_name']) && $_FILES['whatsapp_logo']['error'] === UPLOAD_ERR_OK) {
+            $tmp = $_FILES['whatsapp_logo']['tmp_name'];
+            $fileInfo = @getimagesize($tmp);
+            if ($fileInfo !== false) {
+                $baseDir = dirname(__DIR__);
+                $target1 = $baseDir . '/assets/whatsapp_logo.png';
+                $target2 = $baseDir . '/assets/logo.png';
+                $target3 = $baseDir . '/whatsapp-service/logo.png';
+
+                $saved = false;
+                if (function_exists('imagecreatefromstring')) {
+                    $imgData = @file_get_contents($tmp);
+                    if ($imgData !== false) {
+                        $im = @imagecreatefromstring($imgData);
+                        if ($im !== false) {
+                            imagepng($im, $target1);
+                            imagedestroy($im);
+                            $saved = true;
+                        }
+                    }
+                }
+                if (!$saved) {
+                    move_uploaded_file($tmp, $target1);
+                }
+
+                @copy($target1, $target2);
+                if (is_dir(dirname($target3))) {
+                    @copy($target1, $target3);
+                }
+                $logoUpdated = true;
+            }
+        }
         update_settings($_POST, (int) $user['id']);
-        flash('تم حفظ إعدادات النظام.');
+        flash($logoUpdated ? 'تم حفظ إعدادات النظام وتحديث لوجو الواتساب بنجاح.' : 'تم حفظ إعدادات النظام.');
         redirect('settings');
     }
 

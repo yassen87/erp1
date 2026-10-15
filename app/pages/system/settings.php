@@ -20,7 +20,7 @@ $generalLabels = [
     <p>إدارة تنبيهات النظام، وسائل الدفع، والرسائل التلقائية للفواتير وأعياد الميلاد.</p>
 </section>
 
-<form method="post" style="display: flex; flex-direction: column; gap: 20px;">
+<form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 20px;">
     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
 
     <!-- كارت إعدادات الواتساب وإرسال الفواتير وأعياد الميلاد -->
@@ -30,7 +30,7 @@ $generalLabels = [
                 <span style="font-size: 26px;">💬</span>
                 <div>
                     <h3 style="margin: 0; color: #25D366; font-size: 18px;">إعدادات الواتساب التلقائي (الفواتير وأعياد الميلاد)</h3>
-                    <p class="muted" style="margin: 2px 0 0 0; font-size: 13px;">التحكم في إرسال الفاتورة تلقائياً للعميل ورسائل تهنئة عيد الميلاد المخصصة.</p>
+                    <p class="muted" style="margin: 2px 0 0 0; font-size: 13px;">التحكم في إرسال الفاتورة تلقائياً للعميل ورسائل تهنئة عيد الميلاد المخصصة وتغيير اللوجو.</p>
                 </div>
             </div>
             <a href="index.php?r=call_center" class="btn small" style="background: rgba(37, 211, 102, 0.15); color: #25D366; border: 1px solid #25D366;">
@@ -68,9 +68,8 @@ $generalLabels = [
                     <option value="1" <?= ($settings['whatsapp_attach_logo'] ?? '1') === '1' ? 'selected' : '' ?>>✅ مفعل (إرفاق لوجو حمزة للعطور تلقائياً)</option>
                     <option value="0" <?= ($settings['whatsapp_attach_logo'] ?? '1') === '0' ? 'selected' : '' ?>>❌ معطل (نص فقط)</option>
                 </select>
-                <span class="muted" style="font-size: 12px; display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                    <img src="assets/whatsapp_logo.png?v=<?= time() ?>" alt="لوجو حمزة" style="height: 28px; width: auto; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px;">
-                    <span>يتم إرسال اللوجو الذهبي تلقائياً كصورة مع نص الفاتورة أو التهنئة.</span>
+                <span class="muted" style="font-size: 12px; display: block; margin-top: 4px;">
+                    يتم إرسال اللوجو تلقائياً كصورة مع نص الفاتورة أو التهنئة.
                 </span>
             </div>
             <div>
@@ -79,6 +78,26 @@ $generalLabels = [
                 </label>
                 <input name="settings[whatsapp_api_url]" value="<?= e($settings['whatsapp_api_url'] ?? 'https://erp.transyshub.tech/api/send-message') ?>" placeholder="https://erp.transyshub.tech/api/send-message" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-card, #1f2937); color: #fff; border: 1px solid rgba(255,255,255,0.15); direction: ltr; text-align: left; font-family: monospace;">
                 <span class="muted" style="font-size: 12px;">رابط خدمة الواتساب الآمن عبر HTTPS.</span>
+            </div>
+
+            <!-- بوكس تغيير اللوجو ورفعه -->
+            <div style="grid-column: 1 / -1; background: rgba(0,0,0,0.25); padding: 16px; border-radius: 10px; border: 1px dashed rgba(201, 168, 76, 0.4); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="background: #ffffff; border-radius: 8px; padding: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; min-width: 60px; min-height: 60px;">
+                        <img id="logo-preview" src="assets/whatsapp_logo.png?v=<?= time() ?>" alt="اللوجو الحالي" style="max-height: 50px; max-width: 110px; object-fit: contain;">
+                    </div>
+                    <div>
+                        <strong style="color: var(--gold, #C9A84C); font-size: 15px; display: block;">🖼️ اللوجو المرسل مع رسائل الواتساب:</strong>
+                        <span class="muted" style="font-size: 12px; display: block; margin-top: 3px;">الصورة التي تظهر للعميل في محادثة الواتساب مع الفاتورة أو التهنئة.</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <label class="btn small" style="background: rgba(201, 168, 76, 0.15); color: var(--gold, #C9A84C); border: 1px solid var(--gold, #C9A84C); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-weight: bold;">
+                        <span>📤 اختيار لوجو جديد</span>
+                        <input type="file" name="whatsapp_logo" id="whatsapp_logo_input" accept="image/png,image/jpeg,image/webp" style="display: none;" onchange="previewNewLogo(this)">
+                    </label>
+                    <span id="logo-chosen-name" class="muted" style="font-size: 12px;">لم يتم اختيار صورة</span>
+                </div>
             </div>
         </div>
 
@@ -125,6 +144,18 @@ $generalLabels = [
 </form>
 
 <script>
+function previewNewLogo(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        document.getElementById('logo-chosen-name').textContent = '✅ ' + file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('logo-preview').src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 function testBirthdayGreetings() {
     if (!confirm('هل تريد تشغيل فحص أعياد ميلاد اليوم وإرسال التهنئة فوراً للعملاء المطابقين؟')) return;
     const resDiv = document.getElementById('bday-test-result');
