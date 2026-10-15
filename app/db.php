@@ -86,6 +86,7 @@ function ensure_schema_updates(): void
         "CREATE TABLE IF NOT EXISTS offer_item_components (id INT AUTO_INCREMENT PRIMARY KEY, offer_item_id INT NOT NULL, perfume_product_id INT NOT NULL, grams DECIMAL(12,3) NOT NULL DEFAULT 0.000, INDEX idx_offer_item_components_item (offer_item_id), CONSTRAINT fk_offer_comp_item FOREIGN KEY (offer_item_id) REFERENCES offer_items(id) ON DELETE CASCADE, CONSTRAINT fk_offer_comp_perfume FOREIGN KEY (perfume_product_id) REFERENCES products(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "ALTER TABLE invoice_lines MODIFY COLUMN line_type ENUM('product','custom_recipe','saved_recipe','offer') NOT NULL",
         "ALTER TABLE invoice_lines ADD COLUMN offer_id INT NULL",
+        "ALTER TABLE invoice_lines ADD COLUMN is_gift TINYINT(1) NOT NULL DEFAULT 0",
     ];
     // Migration: branch_targets from target_month to target_date
     try {

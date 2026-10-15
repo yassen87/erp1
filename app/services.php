@@ -1940,10 +1940,11 @@ function create_invoice(array $data, array $user): int
             if (!$product) {
                 throw new RuntimeException('صنف غير موجود.');
             }
-            $unitPrice = (float) ($data['unit_price'][$idx] ?? $product['sale_price']);
+            $isGift = !empty($data['is_gift'][$idx]) && ($data['is_gift'][$idx] === '1' || $data['is_gift'][$idx] === 1 || $data['is_gift'][$idx] === true);
+            $unitPrice = $isGift ? 0.0 : (float) ($data['unit_price'][$idx] ?? $product['sale_price']);
             $gross = $quantity * $unitPrice;
-            $discountType = ($data['line_discount_type'][$idx] ?? '') ?: null;
-            $discountValue = (float) ($data['line_discount_value'][$idx] ?? 0);
+            $discountType = $isGift ? null : (($data['line_discount_type'][$idx] ?? '') ?: null);
+            $discountValue = $isGift ? 0.0 : (float) ($data['line_discount_value'][$idx] ?? 0);
             $discount = line_discount($gross, $discountType, $discountValue);
             $total = $gross - $discount;
             $lines[] = [
@@ -1955,6 +1956,7 @@ function create_invoice(array $data, array $user): int
                 'discount_value' => $discountValue,
                 'discount_amount' => $discount,
                 'line_total' => $total,
+                'is_gift' => $isGift ? 1 : 0,
             ];
             $subtotal += $total;
         }
@@ -1968,12 +1970,13 @@ function create_invoice(array $data, array $user): int
 
             $isWithoutBottle = !empty($mix['without_bottle']);
             $bottleId = (int) ($mix['bottle_id'] ?? 0);
-            $mixSalePrice = (float) ($mix['sale_price'] ?? 0);
+            $isGift = !empty($mix['is_gift']) && ($mix['is_gift'] === '1' || $mix['is_gift'] === 1 || $mix['is_gift'] === true);
+            $mixSalePrice = $isGift ? 0.0 : (float) ($mix['sale_price'] ?? 0);
 
-            if ($mixSalePrice < 0) {
+            if (!$isGift && $mixSalePrice < 0) {
                 continue;
             }
-            if (!$isWithoutBottle && $mixSalePrice <= 0) {
+            if (!$isGift && !$isWithoutBottle && $mixSalePrice <= 0) {
                 continue;
             }
 
@@ -2024,6 +2027,7 @@ function create_invoice(array $data, array $user): int
                     'discount_amount'=> 0.0,
                     'line_total'     => $mixSalePrice,
                     'components'     => $components,
+                    'is_gift'        => $isGift ? 1 : 0,
                 ];
                 $subtotal += $mixSalePrice;
             }
@@ -2067,7 +2071,8 @@ function create_invoice(array $data, array $user): int
                 $perfume = find_product((int) $component['perfume_product_id']);
                 $components[] = ['product' => $perfume, 'quantity' => (float) $component['grams']];
             }
-            $price = (float) ($recipe['default_sale_price'] ?: $recipe['sale_price']);
+            $isGift = !empty($data['recipe_is_gift'][$index]) && ($data['recipe_is_gift'][$index] === '1' || $data['recipe_is_gift'][$index] === 1 || $data['recipe_is_gift'][$index] === true);
+            $price = $isGift ? 0.0 : (float) ($recipe['default_sale_price'] ?: $recipe['sale_price']);
             $lines[] = [
                 'kind' => 'saved_recipe',
                 'recipe_id' => $recipeId,
@@ -2076,6 +2081,7 @@ function create_invoice(array $data, array $user): int
                 'unit_price' => $price,
                 'line_total' => $price,
                 'components' => $components,
+                'is_gift' => $isGift ? 1 : 0,
             ];
             $subtotal += $price;
         }
@@ -2309,14 +2315,33 @@ function create_invoice(array $data, array $user): int
         ]);
         $invoiceId = (int) $db->lastInsertId();
 
+        static $hasIsGiftCol = null;
+        if ($hasIsGiftCol === null) {
+            try {
+                $db->query("SELECT is_gift FROM invoice_lines LIMIT 0");
+                $hasIsGiftCol = true;
+            } catch (Throwable $e) {
+                $hasIsGiftCol = false;
+            }
+        }
+
         foreach ($lines as $line) {
+            $isGift = !empty($line['is_gift']);
             if ($line['kind'] === 'product') {
-                $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, product_id, description, quantity, unit_price, discount_type, discount_value, discount_amount, line_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$invoiceId, 'product', $line['product']['id'], $line['product']['name'], $line['quantity'], $line['unit_price'], $line['discount_type'], $line['discount_value'], $line['discount_amount'], $line['line_total']]);
+                $description = $line['product']['name'] . ($isGift ? ' (هدية)' : '');
+                if ($hasIsGiftCol) {
+                    $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, product_id, description, quantity, unit_price, discount_type, discount_value, discount_amount, line_total, is_gift) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([$invoiceId, 'product', $line['product']['id'], $description, $line['quantity'], $line['unit_price'], $line['discount_type'], $line['discount_value'], $line['discount_amount'], $line['line_total'], $isGift ? 1 : 0]);
+                } else {
+                    $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, product_id, description, quantity, unit_price, discount_type, discount_value, discount_amount, line_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                    $stmt->execute([$invoiceId, 'product', $line['product']['id'], $description, $line['quantity'], $line['unit_price'], $line['discount_type'], $line['discount_value'], $line['discount_amount'], $line['line_total']]);
+                }
                 $lineId = (int) $db->lastInsertId();
-                move_inventory($db, $locationId, (int) $line['product']['id'], -1 * (float) $line['quantity'], 'sale', (int) $user['id'], 'invoice', $invoiceId, 'بيع فاتورة');
-                $stmt = $db->prepare('INSERT INTO invoice_line_components (invoice_line_id, component_product_id, quantity, unit_cost) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$lineId, $line['product']['id'], $line['quantity'], $line['product']['cost_price']]);
+                if (!$isGift) {
+                    move_inventory($db, $locationId, (int) $line['product']['id'], -1 * (float) $line['quantity'], 'sale', (int) $user['id'], 'invoice', $invoiceId, 'بيع فاتورة');
+                    $stmt = $db->prepare('INSERT INTO invoice_line_components (invoice_line_id, component_product_id, quantity, unit_cost) VALUES (?, ?, ?, ?)');
+                    $stmt->execute([$lineId, $line['product']['id'], $line['quantity'], $line['product']['cost_price']]);
+                }
                 continue;
             }
 
@@ -2333,13 +2358,21 @@ function create_invoice(array $data, array $user): int
             }
 
             $lineType = $line['kind'] === 'saved_recipe' ? 'saved_recipe' : 'custom_recipe';
-            $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, recipe_id, description, quantity, unit_price, line_total) VALUES (?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$invoiceId, $lineType, $line['recipe_id'] ?? null, $line['description'], 1, $line['unit_price'], $line['line_total']]);
+            $description = $line['description'] . ($isGift ? ' (هدية)' : '');
+            if ($hasIsGiftCol) {
+                $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, recipe_id, description, quantity, unit_price, line_total, is_gift) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$invoiceId, $lineType, $line['recipe_id'] ?? null, $description, 1, $line['unit_price'], $line['line_total'], $isGift ? 1 : 0]);
+            } else {
+                $stmt = $db->prepare('INSERT INTO invoice_lines (invoice_id, line_type, recipe_id, description, quantity, unit_price, line_total) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                $stmt->execute([$invoiceId, $lineType, $line['recipe_id'] ?? null, $description, 1, $line['unit_price'], $line['line_total']]);
+            }
             $lineId = (int) $db->lastInsertId();
-            foreach ($line['components'] as $component) {
-                move_inventory($db, $locationId, (int) $component['product']['id'], -1 * (float) $component['quantity'], 'sale', (int) $user['id'], 'invoice', $invoiceId, 'مكون تركيبة فورية');
-                $stmt = $db->prepare('INSERT INTO invoice_line_components (invoice_line_id, component_product_id, quantity, unit_cost) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$lineId, $component['product']['id'], $component['quantity'], $component['product']['cost_price']]);
+            if (!$isGift) {
+                foreach ($line['components'] as $component) {
+                    move_inventory($db, $locationId, (int) $component['product']['id'], -1 * (float) $component['quantity'], 'sale', (int) $user['id'], 'invoice', $invoiceId, 'مكون تركيبة فورية');
+                    $stmt = $db->prepare('INSERT INTO invoice_line_components (invoice_line_id, component_product_id, quantity, unit_cost) VALUES (?, ?, ?, ?)');
+                    $stmt->execute([$lineId, $component['product']['id'], $component['quantity'], $component['product']['cost_price']]);
+                }
             }
         }
 

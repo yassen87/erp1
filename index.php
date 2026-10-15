@@ -234,7 +234,9 @@ if ($route === 'pos_sync_offline') {
             $data['unit_price']         = [];
             $data['line_discount_type'] = [];
             $data['line_discount_value']= [];
+            $data['is_gift']            = [];
             $data['recipe_id']          = [];
+            $data['recipe_is_gift']     = [];
             $data['mix_data']           = [];
             foreach ($inv['cart'] ?? [] as $item) {
                 if ($item['type'] === 'product') {
@@ -243,9 +245,11 @@ if ($route === 'pos_sync_offline') {
                     $data['unit_price'][]            = $item['price'];
                     $data['line_discount_type'][]    = $item['discountType'] ?? '';
                     $data['line_discount_value'][]   = $item['discountValue'] ?? 0;
+                    $data['is_gift'][]               = !empty($item['is_gift']) ? '1' : '0';
                 } elseif ($item['type'] === 'recipe') {
                     for ($q = 0; $q < (int)($item['qty'] ?? 1); $q++) {
                         $data['recipe_id'][] = $item['id'];
+                        $data['recipe_is_gift'][] = !empty($item['is_gift']) ? '1' : '0';
                     }
                 } elseif ($item['type'] === 'custom_recipe') {
                     $mixData = [
@@ -254,6 +258,7 @@ if ($route === 'pos_sync_offline') {
                         'sale_price'     => $item['price'] ?? 0,
                         'default_price'  => $item['defaultPrice'] ?? $item['price'] ?? 0,
                         'components'     => $item['components'] ?? [],
+                        'is_gift'        => !empty($item['is_gift']) ? 1 : 0,
                     ];
                     $data['mix_data'][] = json_encode($mixData);
                 }

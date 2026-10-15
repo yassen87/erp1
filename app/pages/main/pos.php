@@ -1113,6 +1113,13 @@ option.low-stock {
                 <label>قيمة الخصم
                     <input id="add-prod-discount-value" type="number" step="any" min="0" placeholder="0">
                 </label>
+                <div style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 8px; border: 1.5px dashed #10b981; margin: 2px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: #065f46;">
+                        <input type="checkbox" id="add-prod-is-gift" style="width: 18px; height: 18px; accent-color: #10b981;" onchange="onAddProdGiftToggle(this.checked)">
+                        <span>🎁 صرف هذا المنتج كهدية / عينة (السعر 0 وبدون خصم مخزون)</span>
+                    </label>
+                    <span id="add-prod-gift-badge" style="display: none; background: #10b981; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">هدية مفعلة</span>
+                </div>
                 <button type="button" class="btn primary" id="add-prod-btn" onclick="addProductToCart()"
                     style="grid-column: span 2; height: 36px; border-radius: 8px;">إضافة صنف للسلة</button>
             </div>
@@ -2073,11 +2080,45 @@ option.low-stock {
         }
     }
 
+    function onAddProdGiftToggle(isGift) {
+        const priceInput = document.getElementById('add-prod-price');
+        const discType = document.getElementById('add-prod-discount-type');
+        const discVal = document.getElementById('add-prod-discount-value');
+        const badge = document.getElementById('add-prod-gift-badge');
+        if (!priceInput) return;
+        if (isGift) {
+            if (!priceInput.dataset.savedPrice) {
+                priceInput.dataset.savedPrice = priceInput.value;
+            }
+            priceInput.value = '0';
+            priceInput.readOnly = true;
+            priceInput.style.background = 'var(--surface-soft)';
+            if (discType) { discType.value = ''; discType.disabled = true; }
+            if (discVal) { discVal.value = '0'; discVal.disabled = true; }
+            if (badge) badge.style.display = 'inline-block';
+        } else {
+            priceInput.readOnly = false;
+            priceInput.style.background = 'var(--surface)';
+            priceInput.value = priceInput.dataset.savedPrice || '';
+            delete priceInput.dataset.savedPrice;
+            if (discType) discType.disabled = false;
+            if (discVal) discVal.disabled = false;
+            if (badge) badge.style.display = 'none';
+        }
+    }
+
     // Auto-fill price when product/recipe is changed
     document.getElementById('add-prod-select').addEventListener('change', function () {
         const option = this.options[this.selectedIndex];
         const price = option.getAttribute('data-price') || 0;
-        document.getElementById('add-prod-price').value = price;
+        const isGiftChecked = document.getElementById('add-prod-is-gift')?.checked || false;
+        const priceInput = document.getElementById('add-prod-price');
+        if (isGiftChecked) {
+            priceInput.value = '0';
+            priceInput.dataset.savedPrice = price;
+        } else {
+            priceInput.value = price;
+        }
         // Show stock indicator
         const stockBar = document.getElementById('stock-warning-bar');
         const stock = option.getAttribute('data-stock');
@@ -2135,16 +2176,18 @@ option.low-stock {
         const option = select.options[select.selectedIndex];
         const name = option.getAttribute('data-name');
         const qty = parseFloat(document.getElementById('add-prod-qty').value) || 0;
-        const price = parseFloat(document.getElementById('add-prod-price').value) || 0;
-        const discountType = document.getElementById('add-prod-discount-type').value;
-        const discountValue = parseFloat(document.getElementById('add-prod-discount-value').value) || 0;
+        const isGift = document.getElementById('add-prod-is-gift')?.checked || false;
+        const price = isGift ? 0 : (parseFloat(document.getElementById('add-prod-price').value) || 0);
+        const originalPrice = parseFloat(option.getAttribute('data-price')) || price;
+        const discountType = isGift ? '' : document.getElementById('add-prod-discount-type').value;
+        const discountValue = isGift ? 0 : (parseFloat(document.getElementById('add-prod-discount-value').value) || 0);
 
         if (qty <= 0) return alert('الرجاء إدخال كمية صحيحة.');
 
-        // Warn only if truly out of stock (not just uninitialized)
+        // Warn only if truly out of stock (not just uninitialized) - skip if gift
         const stockAttr = option.getAttribute('data-stock');
         const isInitAttr = option.getAttribute('data-stock-init') || '0';
-        if (isInitAttr === '1' && stockAttr !== null && stockAttr !== '') {
+        if (!isGift && isInitAttr === '1' && stockAttr !== null && stockAttr !== '') {
             const availableStock = parseFloat(stockAttr);
             if (availableStock <= 0) {
                 if (!confirm('⚠️ تحذير: هذا المنتج نفد من مخزون الفرع الحالي!\nهل تريد إضافته للسلة على مسؤوليتك؟')) {
@@ -2154,7 +2197,7 @@ option.low-stock {
         }
 
         // Check if item exists in cart
-        const existingIndex = cart.findIndex(item => item.id === id && item.type === 'product' && item.discountType === discountType && item.discountValue === discountValue);
+        const existingIndex = cart.findIndex(item => item.id === id && item.type === 'product' && item.discountType === discountType && item.discountValue === discountValue && !!item.is_gift === !!isGift);
 
         if (existingIndex > -1) {
             cart[existingIndex].qty += qty;
@@ -2165,8 +2208,10 @@ option.low-stock {
                 name: name,
                 qty: qty,
                 price: price,
+                original_price: originalPrice,
                 discountType: discountType,
-                discountValue: discountValue
+                discountValue: discountValue,
+                is_gift: isGift
             });
         }
 
@@ -2179,6 +2224,11 @@ option.low-stock {
         document.getElementById('add-prod-price').value = '';
         document.getElementById('add-prod-discount-type').value = '';
         document.getElementById('add-prod-discount-value').value = '';
+        const giftCb = document.getElementById('add-prod-is-gift');
+        if (giftCb && giftCb.checked) {
+            giftCb.checked = false;
+            onAddProdGiftToggle(false);
+        }
 
         renderCart();
     }
@@ -2913,6 +2963,35 @@ option.low-stock {
         renderCart();
     }
 
+    // Toggle gift status for cart item
+    function toggleGift(index) {
+        const item = cart[index];
+        if (!item) return;
+        if (item.is_gift) {
+            item.is_gift = false;
+            item.price = item.original_price !== undefined ? item.original_price : (getProductOriginalPrice(item.id) || 0);
+        } else {
+            item.original_price = (item.price > 0 ? item.price : (getProductOriginalPrice(item.id) || 0));
+            item.is_gift = true;
+            item.price = 0;
+            item.discountType = '';
+            item.discountValue = 0;
+        }
+        renderCart();
+    }
+
+    function getProductOriginalPrice(id) {
+        if (typeof ALL_PRODUCTS_OFFLINE !== 'undefined' && Array.isArray(ALL_PRODUCTS_OFFLINE)) {
+            const p = ALL_PRODUCTS_OFFLINE.find(x => String(x.id) === String(id));
+            if (p && p.sale_price !== undefined) return parseFloat(p.sale_price) || 0;
+        }
+        if (typeof ALL_SAVED_RECIPES !== 'undefined' && Array.isArray(ALL_SAVED_RECIPES)) {
+            const r = ALL_SAVED_RECIPES.find(x => String(x.id) === String(id));
+            if (r && (r.default_sale_price || r.sale_price)) return parseFloat(r.default_sale_price || r.sale_price) || 0;
+        }
+        return 0;
+    }
+
     // Render cart table and populate hidden form fields
     function renderCart() {
         const tbody = document.getElementById('cart-tbody');
@@ -2935,23 +3014,34 @@ option.low-stock {
         cartCount.textContent = cart.length + ' أصناف';
 
         cart.forEach((item, index) => {
-            let gross = item.qty * item.price;
-            let discountText = 'بدون';
-            let lineTotal = gross;
+            const isGift = !!item.is_gift;
+            let gross = isGift ? 0 : (item.qty * item.price);
+            let discountText = isGift ? 'هدية (سعر 0)' : 'بدون';
+            let lineTotal = isGift ? 0 : gross;
 
-            if (item.discountType === 'percent') {
-                const discAmt = gross * (item.discountValue / 100);
-                discountText = `%${item.discountValue} (${discAmt} ج.م)`;
-                lineTotal = gross - discAmt;
-            } else if (item.discountType === 'amount') {
-                discountText = `${item.discountValue} ج.م`;
-                lineTotal = gross - item.discountValue;
+            if (!isGift) {
+                if (item.discountType === 'percent') {
+                    const discAmt = gross * (item.discountValue / 100);
+                    discountText = `%${item.discountValue} (${discAmt} ج.م)`;
+                    lineTotal = gross - discAmt;
+                } else if (item.discountType === 'amount') {
+                    discountText = `${item.discountValue} ج.م`;
+                    lineTotal = gross - item.discountValue;
+                }
             }
 
             lineTotal = Math.max(0, lineTotal);
 
             const badgeClass = item.type === 'product' ? 'direct' : (item.type === 'custom_recipe' ? 'custom' : (item.type === 'offer' ? 'gold' : 'recipe'));
             const badgeLabel = item.type === 'product' ? 'جاهز' : (item.type === 'custom_recipe' ? '🧪 فورية' : (item.type === 'offer' ? '🎁 عرض' : 'تركيبة'));
+            const giftBadge = isGift ? '<span class="badge" style="background:linear-gradient(135deg, #059669, #10b981);color:#fff;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;box-shadow:0 2px 6px rgba(5,150,105,0.25);margin-right:4px;">🎁 هدية مجانية (رصيد المخزون ثابت)</span>' : '';
+
+            let giftToggleBtn = '';
+            if (item.type !== 'offer') {
+                giftToggleBtn = `<button type="button" class="btn small" onclick="toggleGift(${index})" style="padding: 2px 8px; font-size: 11px; border-radius: 6px; font-weight: 700; ${isGift ? 'background: rgba(220,38,38,0.1); color: #dc2626; border: 1px solid rgba(220,38,38,0.3);' : 'background: rgba(16,185,129,0.12); color: #047857; border: 1px solid rgba(16,185,129,0.35);'}" title="${isGift ? 'إلغاء وضع الهدية واستعادة السعر الأصلي' : 'صرف هذا الصنف كهدية مجانية (السعر 0 وبدون خصم من المخزون)'}">
+                    ${isGift ? '✖ إلغاء الهدية' : '🎁 صرف كهدية'}
+                </button>`;
+            }
 
             let warningBadge = '';
             if (item.type === 'custom_recipe') {
@@ -2987,15 +3077,20 @@ option.low-stock {
             }
 
             const row = document.createElement('tr');
-            if (item.type === 'custom_recipe' && warningBadge) {
+            if (isGift) {
+                row.style.background = 'rgba(16, 185, 129, 0.06)';
+                row.style.borderRight = '3px solid #059669';
+            } else if (item.type === 'custom_recipe' && warningBadge) {
                 row.style.background = 'rgba(245,158,11,0.06)';
             }
             row.innerHTML = `
             <td>
                 <strong>${item.name}</strong> 
                 <span class="badge-type ${badgeClass}">${badgeLabel}</span>
+                ${giftBadge}
                 ${warningBadge}
                 ${offerCustomHtml}
+                ${giftToggleBtn ? `<div style="margin-top: 4px;">${giftToggleBtn}</div>` : ''}
             </td>
             <td>
                 <div class="qty-control">
@@ -3006,10 +3101,10 @@ option.low-stock {
                 ${(item.type === 'custom_recipe' && item.without_bottle) ? (() => { const totalG = (item.components || []).reduce((s, c) => s + (parseFloat(c.grams) || 0), 0); return totalG > 0 ? `<div style="font-size:10px;color:var(--muted);text-align:center;margin-top:2px">${parseFloat(totalG.toFixed(2))}جم</div>` : ''; })() : ''}
             </td>
             <td>
-                <input type="number" step="any" min="0" value="${item.price}" onchange="updatePrice(${index}, this.value)" style="width: 80px; text-align: center; padding: 6px; border: 1px solid var(--line); border-radius: 6px;" ${item.type === 'recipe' ? 'readonly' : ''}>
+                ${isGift ? `<span style="color: #047857; font-weight: 800; font-size: 13px; background: rgba(16,185,129,0.12); padding: 5px 10px; border-radius: 6px; display: inline-block;">0.00 ج.م 🎁</span>` : `<input type="number" step="any" min="0" value="${item.price}" onchange="updatePrice(${index}, this.value)" style="width: 80px; text-align: center; padding: 6px; border: 1px solid var(--line); border-radius: 6px;" ${item.type === 'recipe' ? 'readonly' : ''}>`}
             </td>
             <td>
-                ${item.type === 'product' ? `
+                ${isGift ? `<span style="color: #047857; font-size: 12px; font-weight: 700;">هدية (سعر 0)</span>` : (item.type === 'product' ? `
                     <div style="display: flex; gap: 4px; align-items: center;">
                         <select onchange="updateLineDiscountType(${index}, this.value)" style="padding: 4px 6px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px;">
                             <option value="" ${item.discountType === '' ? 'selected' : ''}>بدون</option>
@@ -3018,9 +3113,9 @@ option.low-stock {
                         </select>
                         <input type="number" step="any" min="0" value="${item.discountValue}" onchange="updateLineDiscountValue(${index}, this.value)" style="width: 65px; text-align: center; padding: 4px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px;">
                     </div>
-                ` : `<span class="muted">-</span>`}
+                ` : `<span class="muted">-</span>`)}
             </td>
-            <td><strong>${lineTotal} ج.م</strong></td>
+            <td><strong>${isGift ? '<span style="color:#047857;">0.00 ج.م 🎁</span>' : (lineTotal + ' ج.م')}</strong></td>
             <td>
                 <button type="button" class="btn-delete-item" onclick="removeItem(${index})" title="حذف">×</button>
             </td>
@@ -3031,9 +3126,10 @@ option.low-stock {
                 hiddenContainer.innerHTML += `
                 <input type="hidden" name="product_id[]" value="${item.id}">
                 <input type="hidden" name="quantity[]" value="${item.qty}">
-                <input type="hidden" name="unit_price[]" value="${item.price}">
-                <input type="hidden" name="line_discount_type[]" value="${item.discountType}">
-                <input type="hidden" name="line_discount_value[]" value="${item.discountValue}">
+                <input type="hidden" name="unit_price[]" value="${isGift ? 0 : item.price}">
+                <input type="hidden" name="line_discount_type[]" value="${isGift ? '' : item.discountType}">
+                <input type="hidden" name="line_discount_value[]" value="${isGift ? 0 : item.discountValue}">
+                <input type="hidden" name="is_gift[]" value="${isGift ? '1' : '0'}">
             `;
             } else if (item.type === 'offer') {
                 const customDataStr = JSON.stringify(item.custom_data || {});
@@ -3052,15 +3148,17 @@ option.low-stock {
                     <input type="hidden" name="recipe_id[]" value="${item.id}">
                     <input type="hidden" name="recipe_bottle_id[]" value="${bottleIdToSend}">
                     <input type="hidden" name="recipe_without_bottle[]" value="${isWithoutBottle ? '1' : '0'}">
+                    <input type="hidden" name="recipe_is_gift[]" value="${isGift ? '1' : '0'}">
                 `;
                 }
             } else if (item.type === 'custom_recipe') {
                 const mixData = JSON.stringify({
                     bottle_id: item.bottle_id,
                     without_bottle: item.without_bottle || false,
-                    sale_price: item.price,
+                    sale_price: isGift ? 0 : item.price,
                     default_price: item.defaultPrice || item.price,
-                    components: item.components
+                    components: item.components,
+                    is_gift: isGift ? 1 : 0
                 });
                 for (let q = 0; q < item.qty; q++) {
                     hiddenContainer.innerHTML += `
@@ -3151,6 +3249,7 @@ option.low-stock {
 
         // Sum cart items
         cart.forEach(item => {
+            if (item.is_gift) return; // Gift items contribute 0
             let gross = item.qty * item.price;
             let discount = 0;
             if (item.discountType === 'percent') {
@@ -3230,6 +3329,12 @@ option.low-stock {
             let paidSecondary = parseInt(secondaryInput.value) || 0;
             
             paidInput.value = paidCash + paidSecondary;
+        }
+
+        if (cart.length > 0 && netPayable === 0 && (paidInput.value === '' || parseInt(paidInput.value) > 0)) {
+            if (cart.every(it => it.is_gift)) {
+                paidInput.value = 0;
+            }
         }
 
         let paid = parseInt(paidInput.value) || 0;
@@ -4100,7 +4205,7 @@ function lookupBarcode(barcode) {
                             break;
                         }
                     }
-                    const existingRecipe = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'recipe');
+                    const existingRecipe = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'recipe' && !item.is_gift);
                     if (existingRecipe > -1) {
                         cart[existingRecipe].qty += 1;
                     } else {
@@ -4125,7 +4230,7 @@ function lookupBarcode(barcode) {
                         }
                     }
 
-                    const existingProd = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'product' && item.discountType === '' && item.discountValue === 0);
+                    const existingProd = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'product' && item.discountType === '' && item.discountValue === 0 && !item.is_gift);
                     if (existingProd > -1) {
                         cart[existingProd].qty += 1;
                     } else {
@@ -4442,7 +4547,7 @@ window.lookupBarcode = function(barcode) {
         }
         if (barcodeFeedback) { barcodeFeedback.textContent = '✅ (أوفلاين) الزيت: ' + p.name; barcodeFeedback.style.color = 'var(--success)'; }
     } else if (p.type === 'recipe') {
-        const existing = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'recipe');
+        const existing = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'recipe' && !item.is_gift);
         if (existing > -1) { cart[existing].qty += 1; }
         else { cart.push({ type: 'recipe', id: String(p.id), name: p.name, qty: 1, price: Math.round(p.sale_price) || 0, discountType: '', discountValue: 0 }); }
         renderCart();
@@ -4454,7 +4559,7 @@ window.lookupBarcode = function(barcode) {
                 return;
             }
         }
-        const existing = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'product' && item.discountType === '' && item.discountValue === 0);
+        const existing = cart.findIndex(item => String(item.id) === String(p.id) && item.type === 'product' && item.discountType === '' && item.discountValue === 0 && !item.is_gift);
         if (existing > -1) { cart[existing].qty += 1; }
         else { cart.push({ type: 'product', id: String(p.id), name: p.name, qty: 1, price: Math.round(p.sale_price) || 0, discountType: '', discountValue: 0 }); }
         renderCart();
@@ -4511,12 +4616,15 @@ function printOfflineReceipt(invoiceData, localId) {
     // ---- حساب الإجماليات ----
     let subtotal = 0;
     const linesHtml = cartItems.map(item => {
+        const isGift = !!item.is_gift;
         const qty   = Number(item.qty)   || 1;
-        const price = Number(item.price) || 0;
+        const price = isGift ? 0 : (Number(item.price) || 0);
         const gross = qty * price;
         let disc = 0;
-        if (item.discountType === 'percent') disc = gross * ((Number(item.discountValue) || 0) / 100);
-        else if (item.discountType === 'amount') disc = Number(item.discountValue) || 0;
+        if (!isGift) {
+            if (item.discountType === 'percent') disc = gross * ((Number(item.discountValue) || 0) / 100);
+            else if (item.discountType === 'amount') disc = Number(item.discountValue) || 0;
+        }
         const lineTotal = Math.max(0, gross - disc);
         subtotal += lineTotal;
 
@@ -4532,9 +4640,10 @@ function printOfflineReceipt(invoiceData, localId) {
         }
 
         const fmt = n => Number(n).toLocaleString('ar-EG', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ج.م';
+        const giftTitle = isGift ? ' (هدية)' : '';
         return `
         <div class="receipt-item">
-            <div class="item-name">${item.name || '-'}</div>
+            <div class="item-name">${item.name || '-'}${giftTitle}</div>
             <div class="item-calc">
                 <span>${qtyLabel} × ${fmt(price)}</span>
                 <strong>${fmt(lineTotal)}</strong>

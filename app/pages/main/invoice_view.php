@@ -109,7 +109,12 @@ $paymentTranslations = [
             <?php foreach ($lines as $line): ?>
                 <?php $components = invoice_components_rows((int) $line['id']); $bottleSize = invoice_line_bottle_size($components); ?>
                 <tr>
-                    <td><?= e(strip_warning_annotations($line['description'])) ?></td>
+                    <td>
+                        <?= e(strip_warning_annotations($line['description'])) ?>
+                        <?php if (!empty($line['is_gift']) && !str_contains($line['description'], 'هدية')): ?>
+                            <span class="badge" style="background:#10b981; color:#fff; font-size:10px; margin-right:4px;">🎁 هدية</span>
+                        <?php endif; ?>
+                    </td>
                     <td><span class="badge"><?= e($typeTranslations[$line['line_type']] ?? $line['line_type']) ?></span></td>
                     <td><?php
                         if ($line['line_type'] === 'custom_recipe') {

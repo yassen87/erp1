@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS invoice_lines (
   discount_value DECIMAL(12,2) NOT NULL DEFAULT 0,
   discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   line_total DECIMAL(12,2) NOT NULL,
+  is_gift TINYINT(1) NOT NULL DEFAULT 0,
   CONSTRAINT fk_line_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
   CONSTRAINT fk_line_product FOREIGN KEY (product_id) REFERENCES products(id),
   CONSTRAINT fk_line_recipe FOREIGN KEY (recipe_id) REFERENCES recipe_headers(id)
