@@ -653,6 +653,16 @@ table.cart-table td:last-child  { border-radius: 10px 0 0 10px; }
     background: var(--gold-soft) !important;
 }
 
+/* ضمان أن قوائم الاختيار المنبثقة تطفو تماماً فوق العناصر دون دفع محاذاة النموذج أو ترك فراغ */
+.pos-main-panel .custom-select-options-box,
+.custom-select-options-box {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: 0 !important;
+    z-index: 999999 !important;
+}
+
 /* ===== عنصر بحث الباركود ===== */
 #barcode-feedback {
     font-size: 13.5px !important;
@@ -1159,7 +1169,7 @@ option.low-stock {
                 <label style="grid-column: span 2;">سعر البيع الإجمالي للتركيبة
                     <input id="mix_sale_price" type="number" step="1" min="0" placeholder="اكتب السعر النهائي" data-manual="0" oninput="markMixPriceManual(); recalculateTotals()">
                 </label>
-                <div style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; margin-top: 4px; margin-bottom: 4px; gap: 8px; flex-wrap: wrap;">
+                <div style="grid-column: span 4; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; margin-bottom: 4px; gap: 8px; flex-wrap: wrap;">
                     <h4 style="font-size: 12.5px; font-weight: 700; color: var(--muted); margin: 0;">مكونات الزيوت العطرية بالجرام</h4>
                     <div style="display: flex; gap: 6px;">
                         <button type="button" class="btn small primary" id="add-oil-row-btn" onclick="addOilRow()" style="padding: 2px 8px; font-size: 11px; border-radius: 6px;">+ إضافة زيت عطري</button>
@@ -1258,7 +1268,7 @@ option.low-stock {
     align-items: center !important;
 }
 </style>
-                <div id="mix-perfumes-container" style="grid-column: span 2; display: grid; gap: 6px;">
+                <div id="mix-perfumes-container" style="grid-column: span 4; display: grid; gap: 6px;">
                     <!-- First row default -->
                     <div class="line-grid two mix-perfume-row">
                         <select name="mix_perfume_id[]" onchange="onPerfumeOrBottleChange(this)">
@@ -1280,8 +1290,8 @@ option.low-stock {
                         <button type="button" class="btn small danger" onclick="removeOilRow(this)" style="padding: 6px 12px; border-radius: 8px;">حذف</button>
                     </div>
                 </div>
-                <small id="mix-default-note" class="muted" style="grid-column: span 2; display: block; min-height: 18px;"></small>
-                <div style="grid-column: span 2; display: flex; gap: 8px;">
+                <small id="mix-default-note" class="muted" style="grid-column: span 4; display: block; min-height: 18px;"></small>
+                <div style="grid-column: span 4; display: flex; gap: 8px;">
                     <button type="button" class="btn primary" id="add-mix-to-cart-btn" onclick="addMixToCart()" style="flex: 1.2; height: 38px; border-radius: 8px; font-weight: 800;">
                         ➕ إضافة التركيبة الفورية للسلة
                     </button>
