@@ -2072,7 +2072,8 @@ function create_invoice(array $data, array $user): int
                 $components[] = ['product' => $perfume, 'quantity' => (float) $component['grams']];
             }
             $isGift = !empty($data['recipe_is_gift'][$index]) && ($data['recipe_is_gift'][$index] === '1' || $data['recipe_is_gift'][$index] === 1 || $data['recipe_is_gift'][$index] === true);
-            $price = $isGift ? 0.0 : (float) ($recipe['default_sale_price'] ?: $recipe['sale_price']);
+            $customRecipePrice = isset($data['recipe_price'][$index]) && $data['recipe_price'][$index] !== '' ? (float)$data['recipe_price'][$index] : null;
+            $price = $isGift ? 0.0 : ($customRecipePrice !== null ? $customRecipePrice : (float) ($recipe['default_sale_price'] ?: $recipe['sale_price']));
             $lines[] = [
                 'kind' => 'saved_recipe',
                 'recipe_id' => $recipeId,

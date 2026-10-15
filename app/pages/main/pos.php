@@ -1151,6 +1151,13 @@ option.low-stock {
                 <label>السعر
                     <input id="add-recipe-price" type="number" step="any" min="0" placeholder="0">
                 </label>
+                <div style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 8px; border: 1.5px dashed #10b981; margin: 2px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: #065f46;">
+                        <input type="checkbox" id="add-recipe-is-gift" style="width: 18px; height: 18px; accent-color: #10b981;" onchange="onAddRecipeGiftToggle(this.checked)">
+                        <span>🎁 صرف هذه التركيبة كهدية / عينة (السعر 0 وبدون خصم مخزون)</span>
+                    </label>
+                    <span id="add-recipe-gift-badge" style="display: none; background: #10b981; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">هدية مفعلة</span>
+                </div>
                 <button type="button" class="btn primary" id="add-recipe-btn" onclick="addRecipeToCart()"
                     style="grid-column: span 2; height: 36px; border-radius: 8px;">إضافة التركيبة للسلة</button>
             </div>
@@ -1298,6 +1305,13 @@ option.low-stock {
                     </div>
                 </div>
                 <small id="mix-default-note" class="muted" style="grid-column: span 4; display: block; min-height: 18px;"></small>
+                <div style="grid-column: span 4; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 8px; border: 1.5px dashed #10b981; margin: 4px 0;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: #065f46;">
+                        <input type="checkbox" id="add-mix-is-gift" style="width: 18px; height: 18px; accent-color: #10b981;" onchange="onAddMixGiftToggle(this.checked)">
+                        <span>🎁 صرف هذه التركيبة الفورية كهدية / عينة (السعر 0 وبدون خصم مخزون)</span>
+                    </label>
+                    <span id="add-mix-gift-badge" style="display: none; background: #10b981; color: #fff; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">هدية مفعلة</span>
+                </div>
                 <div style="grid-column: span 4; display: flex; gap: 8px;">
                     <button type="button" class="btn primary" id="add-mix-to-cart-btn" onclick="addMixToCart()" style="flex: 1.2; height: 38px; border-radius: 8px; font-weight: 800;">
                         ➕ إضافة التركيبة الفورية للسلة
@@ -2145,11 +2159,24 @@ option.low-stock {
         }
     });
 
-    document.getElementById('add-recipe-select').addEventListener('change', function () {
-        const option = this.options[this.selectedIndex];
-        const price = option.getAttribute('data-price') || 0;
-        document.getElementById('add-recipe-price').value = price;
-    });
+    function onAddRecipeGiftToggle(checked) {
+        const priceInput = document.getElementById('add-recipe-price');
+        const badge = document.getElementById('add-recipe-gift-badge');
+        if (badge) badge.style.display = checked ? 'inline-block' : 'none';
+        if (priceInput) {
+            if (checked) {
+                priceInput.dataset.preGiftPrice = priceInput.value || '';
+                priceInput.value = '0';
+            } else {
+                const select = document.getElementById('add-recipe-select');
+                let orig = priceInput.dataset.preGiftPrice;
+                if ((!orig || parseFloat(orig) <= 0) && select && select.selectedIndex > -1) {
+                    orig = select.options[select.selectedIndex]?.getAttribute('data-price') || '0';
+                }
+                priceInput.value = orig || '0';
+            }
+        }
+    }
 
     // Change handler for saved recipe selection
     function onSavedRecipeSelectChange() {
@@ -2157,8 +2184,12 @@ option.low-stock {
         if (!select || !select.value) return;
         const option = select.options[select.selectedIndex];
         const price = option.getAttribute('data-price') || 0;
+        const isGift = document.getElementById('add-recipe-is-gift')?.checked || false;
         const priceInput = document.getElementById('add-recipe-price');
-        if (priceInput) priceInput.value = price;
+        if (priceInput) {
+            priceInput.dataset.preGiftPrice = price;
+            priceInput.value = isGift ? 0 : price;
+        }
 
         const bottleSelect = document.getElementById('saved_recipe_bottle_id');
         if (bottleSelect) {
@@ -2166,6 +2197,10 @@ option.low-stock {
             if (typeof refreshSearchableSelect === 'function') refreshSearchableSelect(bottleSelect);
         }
     }
+
+    document.getElementById('add-recipe-select').addEventListener('change', function () {
+        onSavedRecipeSelectChange();
+    });
 
     // Add direct product to cart array
     function addProductToCart() {
@@ -2242,7 +2277,11 @@ option.low-stock {
         const option = select.options[select.selectedIndex];
         const name = option.getAttribute('data-name');
         const qty = parseFloat(document.getElementById('add-recipe-qty').value) || 0;
-        const price = parseFloat(document.getElementById('add-recipe-price').value) || 0;
+        const isGift = document.getElementById('add-recipe-is-gift')?.checked || false;
+        const optionPrice = parseFloat(option.getAttribute('data-price')) || 0;
+        const inputPrice = parseFloat(document.getElementById('add-recipe-price').value) || 0;
+        const price = isGift ? 0 : inputPrice;
+        const originalPrice = optionPrice > 0 ? optionPrice : inputPrice;
 
         if (qty <= 0) return alert('الرجاء إدخال كمية صحيحة.');
 
@@ -2267,8 +2306,10 @@ option.low-stock {
             without_bottle: isWithoutBottle,
             qty: qty,
             price: price,
+            original_price: originalPrice,
             discountType: '',
-            discountValue: 0
+            discountValue: 0,
+            is_gift: isGift
         });
 
         select.value = '';
@@ -2277,6 +2318,11 @@ option.low-stock {
 
         document.getElementById('add-recipe-qty').value = '1';
         document.getElementById('add-recipe-price').value = '';
+        const giftCb = document.getElementById('add-recipe-is-gift');
+        if (giftCb && giftCb.checked) {
+            giftCb.checked = false;
+            onAddRecipeGiftToggle(false);
+        }
         if (bottleSelect) {
             bottleSelect.value = 'default';
             if (typeof refreshSearchableSelect === 'function') refreshSearchableSelect(bottleSelect);
@@ -2969,9 +3015,15 @@ option.low-stock {
         if (!item) return;
         if (item.is_gift) {
             item.is_gift = false;
-            item.price = item.original_price !== undefined ? item.original_price : (getProductOriginalPrice(item.id) || 0);
+            let restored = item.original_price;
+            if (restored === undefined || restored === null || restored <= 0) {
+                if (item.defaultPrice && item.defaultPrice > 0) restored = item.defaultPrice;
+                else restored = getProductOriginalPrice(item.id) || 0;
+            }
+            item.price = restored;
         } else {
-            item.original_price = (item.price > 0 ? item.price : (getProductOriginalPrice(item.id) || 0));
+            let orig = item.price > 0 ? item.price : (item.defaultPrice || getProductOriginalPrice(item.id) || 0);
+            item.original_price = orig;
             item.is_gift = true;
             item.price = 0;
             item.discountType = '';
@@ -3148,6 +3200,7 @@ option.low-stock {
                     <input type="hidden" name="recipe_id[]" value="${item.id}">
                     <input type="hidden" name="recipe_bottle_id[]" value="${bottleIdToSend}">
                     <input type="hidden" name="recipe_without_bottle[]" value="${isWithoutBottle ? '1' : '0'}">
+                    <input type="hidden" name="recipe_price[]" value="${isGift ? 0 : item.price}">
                     <input type="hidden" name="recipe_is_gift[]" value="${isGift ? '1' : '0'}">
                 `;
                 }
@@ -3567,10 +3620,39 @@ option.low-stock {
         calculateSuggestedMixPrice();
     }
 
+    function onAddMixGiftToggle(checked) {
+        const priceInput = document.getElementById('mix_sale_price');
+        const badge = document.getElementById('add-mix-gift-badge');
+        if (badge) badge.style.display = checked ? 'inline-block' : 'none';
+        if (priceInput) {
+            if (checked) {
+                priceInput.dataset.preGiftPrice = priceInput.value || priceInput.dataset.defaultPrice || '0';
+                priceInput.value = '0';
+                priceInput.dataset.manual = '1';
+            } else {
+                priceInput.dataset.manual = '0';
+                const restore = priceInput.dataset.preGiftPrice || priceInput.dataset.defaultPrice;
+                if (restore && parseFloat(restore) > 0) {
+                    priceInput.value = restore;
+                } else {
+                    calculateSuggestedMixPrice();
+                }
+            }
+        }
+        recalculateTotals();
+    }
+
     // Calculate the suggested total price of the custom mix
     function calculateSuggestedMixPrice() {
         const mixBottleSelect = document.getElementById('mix_bottle_id');
         const mixPriceInput = document.getElementById('mix_sale_price');
+
+        const isGift = document.getElementById('add-mix-is-gift')?.checked || false;
+        if (isGift) {
+            if (mixPriceInput) mixPriceInput.value = '0';
+            recalculateTotals();
+            return;
+        }
 
         if (!mixBottleSelect || mixBottleSelect.value === '') {
             if (mixPriceInput && mixPriceInput.dataset.manual !== '1') mixPriceInput.value = '0';
@@ -3650,18 +3732,21 @@ option.low-stock {
         if (bottleId === 'no_bottle') bottleName = 'بدون زجاجة';
         if (bottleId === 'pump_only') bottleName = 'بمبة';
         
+        const isGift = document.getElementById('add-mix-is-gift')?.checked || false;
         const bottlePrice = isWithoutBottle ? 0 : (parseInt(bottleOption.getAttribute('data-price')) || 0);
         const mixPriceInput = document.getElementById('mix_sale_price');
-        const salePrice = parseInt(mixPriceInput.value) || 0;
+        const salePrice = isGift ? 0 : (parseInt(mixPriceInput.value) || 0);
         
-        if (isWithoutBottle) {
-            if (salePrice < 0) return alert('الرجاء إدخال سعر بيع صحيح للتركيبة.');
-        } else {
-            if (salePrice <= 0) return alert('الرجاء إدخال سعر بيع صحيح للتركيبة.');
+        if (!isGift) {
+            if (isWithoutBottle) {
+                if (salePrice < 0) return alert('الرجاء إدخال سعر بيع صحيح للتركيبة.');
+            } else {
+                if (salePrice <= 0) return alert('الرجاء إدخال سعر بيع صحيح للتركيبة.');
+            }
         }
 
         // تخزين السعر المحتسب (default) للمقارنة لاحقاً
-        const defaultPrice = parseInt(mixPriceInput.dataset.defaultPrice) || salePrice;
+        const defaultPrice = parseInt(mixPriceInput.dataset.defaultPrice) || (salePrice > 0 ? salePrice : 0);
         const wasManual = mixPriceInput.dataset.manual === '1';
 
         const perfumeRows = document.querySelectorAll('.mix-perfume-row');
@@ -3708,6 +3793,7 @@ option.low-stock {
             name: '🧪 تركيبة فورية: ' + (isWithoutBottle && !isPumpOnly ? 'بدون زجاجة + ' : '') + descriptionParts.join(' + '),
             qty: 1,
             price: salePrice,
+            original_price: salePrice > 0 ? salePrice : (defaultPrice > 0 ? defaultPrice : 0),
             defaultPrice: defaultPrice,
             priceModified: wasManual && salePrice !== defaultPrice,
             discountType: '',
@@ -3716,7 +3802,8 @@ option.low-stock {
             without_bottle: isWithoutBottle,
             bottle_name: bottleName,
             bottle_price: bottlePrice,
-            components: components
+            components: components,
+            is_gift: isGift
         };
 
         cart.push(mixItem);
@@ -3731,6 +3818,12 @@ option.low-stock {
 
         document.getElementById('mix_sale_price').value = '';
         resetMixPriceManual();
+
+        const giftCb = document.getElementById('add-mix-is-gift');
+        if (giftCb && giftCb.checked) {
+            giftCb.checked = false;
+            onAddMixGiftToggle(false);
+        }
 
         const container = document.getElementById('mix-perfumes-container');
         const rows = container.querySelectorAll('.mix-perfume-row');

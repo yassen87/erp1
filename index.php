@@ -249,13 +249,16 @@ if ($route === 'pos_sync_offline') {
                 } elseif ($item['type'] === 'recipe') {
                     for ($q = 0; $q < (int)($item['qty'] ?? 1); $q++) {
                         $data['recipe_id'][] = $item['id'];
+                        $data['recipe_bottle_id'][] = $item['bottle_id'] ?? 'default';
+                        $data['recipe_without_bottle'][] = !empty($item['without_bottle']) ? '1' : '0';
+                        $data['recipe_price'][] = !empty($item['is_gift']) ? 0 : ($item['price'] ?? 0);
                         $data['recipe_is_gift'][] = !empty($item['is_gift']) ? '1' : '0';
                     }
                 } elseif ($item['type'] === 'custom_recipe') {
                     $mixData = [
                         'bottle_id'      => $item['bottle_id'] ?? 0,
                         'without_bottle' => $item['without_bottle'] ?? false,
-                        'sale_price'     => $item['price'] ?? 0,
+                        'sale_price'     => !empty($item['is_gift']) ? 0 : ($item['price'] ?? 0),
                         'default_price'  => $item['defaultPrice'] ?? $item['price'] ?? 0,
                         'components'     => $item['components'] ?? [],
                         'is_gift'        => !empty($item['is_gift']) ? 1 : 0,
