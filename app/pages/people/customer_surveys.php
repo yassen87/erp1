@@ -143,22 +143,43 @@ function format_delay_label(int $mins): string {
                     <tbody>
                         <?php foreach ($ratedRows as $row): 
                             $isSat = ($row['rating'] === 'satisfied');
+                            $rowData = [
+                                'customer_name' => $row['customer_name'] ?? 'زبون عابر',
+                                'customer_id' => !empty($row['customer_id']) ? (int)$row['customer_id'] : null,
+                                'phone' => $row['phone'] ?? '',
+                                'location_name' => $row['location_name'] ?? '-',
+                                'invoice_id' => (int)$row['invoice_id'],
+                                'invoice_number' => $row['invoice_number'] ?? ('#' . $row['invoice_id']),
+                                'invoice_total' => !empty($row['invoice_total']) ? number_format((float)$row['invoice_total'], 2) : '',
+                                'rating' => $row['rating'] ?? '',
+                                'is_satisfied' => $isSat,
+                                'feedback_notes' => trim((string)($row['feedback_notes'] ?? '')),
+                                'date' => !empty($row['rated_at']) ? date('d/m/Y h:i A', strtotime($row['rated_at'])) : date('d/m/Y h:i A', strtotime($row['created_at'])),
+                            ];
+                            $rowJson = htmlspecialchars(json_encode($rowData, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
                         ?>
-                            <tr style="<?= !$isSat ? 'background: rgba(239, 68, 68, 0.05);' : '' ?>">
+                            <tr class="review-row-clickable" style="<?= !$isSat ? 'background: rgba(239, 68, 68, 0.05);' : '' ?> cursor: pointer;" onclick="openReviewModal(<?= $rowJson ?>)">
                                 <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="cust-name-badge" title="اضغط هنا لعرض رأي العميل بالكامل على الشاشة">
+                                            <span style="font-size: 16px;">👤</span>
+                                            <strong style="color: var(--gold, #C9A84C); font-size: 15px; text-decoration: underline; text-underline-offset: 4px;"><?= e($row['customer_name'] ?? 'زبون عابر') ?></strong>
+                                            <span style="font-size: 11px; background: rgba(201,168,76,0.15); color: var(--gold, #C9A84C); padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(201,168,76,0.3); font-weight: 600;">👁️ عرض الرأي</span>
+                                        </span>
+                                    </div>
                                     <?php if (!empty($row['customer_id'])): ?>
-                                        <strong><a href="index.php?r=customer_view&id=<?= e($row['customer_id']) ?>"><?= e($row['customer_name'] ?? 'عميل') ?></a></strong>
-                                    <?php else: ?>
-                                        <strong><?= e($row['customer_name'] ?? 'زبون عابر') ?></strong>
+                                        <a href="index.php?r=customer_view&id=<?= e($row['customer_id']) ?>" onclick="event.stopPropagation();" style="font-size: 11px; color: #94a3b8; text-decoration: underline; display: inline-block; margin-top: 4px;">
+                                            بروفايل العميل
+                                        </a>
                                     <?php endif; ?>
                                 </td>
                                 <td>
                                     <span dir="ltr" style="font-family: monospace; font-weight: 600;"><?= e($row['phone']) ?></span>
-                                    <a href="https://wa.me/2<?= preg_replace('/\D/', '', $row['phone']) ?>" target="_blank" title="محادثة واتساب مباشرة" style="text-decoration: none; margin-right: 4px;">💬</a>
+                                    <a href="https://wa.me/2<?= preg_replace('/\D/', '', $row['phone']) ?>" onclick="event.stopPropagation();" target="_blank" title="محادثة واتساب مباشرة" style="text-decoration: none; margin-right: 4px;">💬</a>
                                 </td>
                                 <td><?= e($row['location_name'] ?? '-') ?></td>
                                 <td>
-                                    <a href="index.php?r=invoice_view&id=<?= e($row['invoice_id']) ?>" title="عرض الفاتورة">
+                                    <a href="index.php?r=invoice_view&id=<?= e($row['invoice_id']) ?>" onclick="event.stopPropagation();" title="عرض الفاتورة">
                                         <?= e($row['invoice_number'] ?? '#' . $row['invoice_id']) ?>
                                     </a>
                                 </td>
@@ -176,7 +197,7 @@ function format_delay_label(int $mins): string {
                                 <td>
                                     <?php if (!empty($row['feedback_notes'])): ?>
                                         <div style="max-width: 320px; font-size: 13px; line-height: 1.4; color: <?= !$isSat ? '#f87171' : 'var(--text)' ?>; background: rgba(0,0,0,0.03); padding: 6px 10px; border-radius: 6px;">
-                                            <?= e($row['feedback_notes']) ?>
+                                            <?= e(mb_strimwidth($row['feedback_notes'], 0, 80, '...')) ?>
                                         </div>
                                     <?php else: ?>
                                         <span class="muted" style="font-size: 12px;">بدون ملاحظات إضافية</span>
@@ -185,9 +206,12 @@ function format_delay_label(int $mins): string {
                                 <td>
                                     <?= !empty($row['rated_at']) ? date('d/m/Y h:i A', strtotime($row['rated_at'])) : date('d/m/Y h:i A', strtotime($row['created_at'])) ?>
                                 </td>
-                                <td style="text-align: center;">
-                                    <a class="btn small" href="https://wa.me/2<?= preg_replace('/\D/', '', $row['phone']) ?>?text=<?= urlencode('أهلاً بك أستاذ ' . ($row['customer_name'] ?? '') . '، نتواصل معك بخصوص زيارتك لفرع ' . ($row['location_name'] ?? 'حمزة للعطور')) ?>" target="_blank" style="background: #25D366; color: #fff; text-decoration: none;">
-                                        تواصل واتساب
+                                <td style="text-align: center; white-space: nowrap;">
+                                    <button type="button" class="btn small" onclick="event.stopPropagation(); openReviewModal(<?= $rowJson ?>)" style="background: rgba(201, 168, 76, 0.2); color: var(--gold, #C9A84C); border: 1px solid var(--gold, #C9A84C); font-weight: bold; margin-left: 4px;">
+                                        👁️ عرض الرأي
+                                    </button>
+                                    <a class="btn small" onclick="event.stopPropagation();" href="https://wa.me/2<?= preg_replace('/\D/', '', $row['phone']) ?>?text=<?= urlencode('أهلاً بك أستاذ ' . ($row['customer_name'] ?? '') . '، نتواصل معك بخصوص زيارتك لفرع ' . ($row['location_name'] ?? 'حمزة للعطور')) ?>" target="_blank" style="background: #25D366; color: #fff; text-decoration: none;">
+                                        واتساب
                                     </a>
                                 </td>
                             </tr>
@@ -392,9 +416,203 @@ function format_delay_label(int $mins): string {
     </section>
 <?php endif; ?>
 
+<!-- نافذة عرض رأي العميل كاملة (Full View Modal) -->
+<div id="customerReviewModal" style="display: none; position: fixed; inset: 0; z-index: 999999; background: rgba(8, 12, 22, 0.94); backdrop-filter: blur(12px); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;" onclick="if(event.target === this) closeReviewModal();">
+    <div style="background: linear-gradient(145deg, #182235, #0f172a); border: 2px solid rgba(201, 168, 76, 0.45); border-radius: 20px; width: 100%; max-width: 950px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0,0,0,0.9), 0 0 50px rgba(201,168,76,0.18); animation: zoomInReview 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        
+        <!-- Modal Header -->
+        <div style="padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">💬</span>
+                <div>
+                    <h3 style="margin: 0; color: var(--gold, #C9A84C); font-size: 20px; font-weight: 700;">تفاصيل رأي واستبيان العميل</h3>
+                    <p class="muted" style="margin: 2px 0 0; font-size: 13px;">مراجعة تقييم العميل ورأيه بالكامل والتواصل المباشر معه</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeReviewModal()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: #fff; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='#fff';" title="إغلاق (Esc)">
+                ✕
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div style="padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+            
+            <!-- Customer & Invoice Summary Card -->
+            <div style="background: rgba(0,0,0,0.35); border-radius: 14px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.08); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div>
+                    <span class="muted" style="font-size: 12px; display: block; margin-bottom: 4px;">👤 العميل</span>
+                    <strong id="modalCustName" style="font-size: 20px; color: #fff; display: block;">-</strong>
+                    <span id="modalCustLinkWrap" style="font-size: 12px; margin-top: 3px; display: block;"></span>
+                </div>
+                <div>
+                    <span class="muted" style="font-size: 12px; display: block; margin-bottom: 4px;">📞 رقم الهاتف</span>
+                    <strong id="modalCustPhone" dir="ltr" style="font-size: 17px; color: #38bdf8; font-family: monospace; display: block;">-</strong>
+                </div>
+                <div>
+                    <span class="muted" style="font-size: 12px; display: block; margin-bottom: 4px;">🏢 الفرع</span>
+                    <strong id="modalCustBranch" style="font-size: 16px; color: #e2e8f0; display: block;">-</strong>
+                </div>
+                <div>
+                    <span class="muted" style="font-size: 12px; display: block; margin-bottom: 4px;">🧾 الفاتورة</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong id="modalCustInvoice" style="font-size: 16px; color: var(--gold, #C9A84C);">-</strong>
+                        <span id="modalCustInvoiceTotal" class="badge" style="background: rgba(201,168,76,0.15); color: var(--gold, #C9A84C); font-size: 12px;"></span>
+                    </div>
+                </div>
+                <div>
+                    <span class="muted" style="font-size: 12px; display: block; margin-bottom: 4px;">🕒 وقت وتاريخ التقييم</span>
+                    <span id="modalCustDate" style="font-size: 14px; color: #cbd5e1; font-weight: 500;">-</span>
+                </div>
+            </div>
+
+            <!-- Rating Status Banner -->
+            <div id="modalRatingBanner" style="padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <span id="modalRatingIcon" style="font-size: 34px;">👍</span>
+                    <div>
+                        <strong id="modalRatingText" style="font-size: 18px; display: block;">-</strong>
+                        <span id="modalRatingSub" style="font-size: 13px; opacity: 0.9;">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opinion / Feedback Block (The Core) -->
+            <div style="background: rgba(15, 23, 42, 0.75); border: 2px dashed rgba(201, 168, 76, 0.45); border-radius: 16px; padding: 26px; position: relative;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
+                    <span style="font-size: 16px; font-weight: 700; color: var(--gold, #C9A84C); display: flex; align-items: center; gap: 8px;">
+                        <span>✍️ رأي وملاحظات العميل:</span>
+                    </span>
+                    <span style="font-size: 32px; opacity: 0.25; line-height: 1; font-family: Georgia, serif;">❝</span>
+                </div>
+                <div id="modalCustFeedback" style="font-size: 20px; line-height: 1.85; color: #ffffff; white-space: pre-wrap; font-weight: 500; min-height: 80px;">
+                    -
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal Footer Actions -->
+        <div style="padding: 18px 24px; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <a id="modalWhatsAppBtn" href="#" target="_blank" class="btn" style="background: #25D366; color: #fff; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 15px;">
+                    💬 محادثة واتساب فورية مع العميل
+                </a>
+                <a id="modalInvoiceBtn" href="#" class="btn" style="background: rgba(255,255,255,0.1); color: #fff; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 10px 18px; border-radius: 8px;">
+                    📄 فتح تفاصيل الفاتورة
+                </a>
+            </div>
+            <button type="button" class="btn" onclick="closeReviewModal()" style="background: rgba(255,255,255,0.08); color: #cbd5e1; padding: 10px 24px; border-radius: 8px; font-weight: 600;">
+                إغلاق (Esc)
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes zoomInReview {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+.review-row-clickable {
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.review-row-clickable:hover {
+    background: rgba(201, 168, 76, 0.08) !important;
+}
+.cust-name-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+.cust-name-badge:hover {
+    background: rgba(201, 168, 76, 0.15);
+}
+</style>
+
 <script>
 const defaultSurveyMsgTemplate = <?= json_encode($defaultSurveyMsg, JSON_UNESCAPED_UNICODE) ?>;
 const shopBrandName = <?= json_encode($shopName, JSON_UNESCAPED_UNICODE) ?>;
+
+function openReviewModal(data) {
+    if (!data) return;
+    document.getElementById('modalCustName').textContent = data.customer_name || 'عميل';
+    
+    const wrap = document.getElementById('modalCustLinkWrap');
+    if (data.customer_id) {
+        wrap.innerHTML = `<a href="index.php?r=customer_view&id=${data.customer_id}" target="_blank" onclick="event.stopPropagation();" style="color: var(--gold, #C9A84C); text-decoration: underline;">فتح بروفايل العميل ↗</a>`;
+    } else {
+        wrap.innerHTML = '<span class="muted">زبون عابر</span>';
+    }
+
+    document.getElementById('modalCustPhone').textContent = data.phone || '-';
+    document.getElementById('modalCustBranch').textContent = data.location_name || '-';
+    document.getElementById('modalCustInvoice').textContent = data.invoice_number || '-';
+    document.getElementById('modalCustInvoiceTotal').textContent = data.invoice_total ? (data.invoice_total + ' ج.م') : '';
+    document.getElementById('modalCustDate').textContent = data.date || '-';
+
+    // Rating Banner
+    const banner = document.getElementById('modalRatingBanner');
+    const icon = document.getElementById('modalRatingIcon');
+    const text = document.getElementById('modalRatingText');
+    const sub = document.getElementById('modalRatingSub');
+
+    if (data.is_satisfied) {
+        banner.style.background = 'rgba(16, 185, 129, 0.15)';
+        banner.style.border = '1px solid #10b981';
+        banner.style.color = '#10b981';
+        icon.textContent = '🟢 👍';
+        text.textContent = 'العميل راضٍ جداً عن الخدمة والمنتج';
+        sub.textContent = 'تم تسجيل هذا التقييم الإيجابي عبر رابط الاستبيان التفاعلي';
+    } else {
+        banner.style.background = 'rgba(239, 68, 68, 0.18)';
+        banner.style.border = '1px solid #ef4444';
+        banner.style.color = '#ef4444';
+        icon.textContent = '🔴 👎';
+        text.textContent = 'العميل غير راضٍ عن الخدمة / المنتج';
+        sub.textContent = 'يُرجى التواصل السريع مع العميل لحل مشكلته ومعالجة أسباب عدم الرضا';
+    }
+
+    // Feedback Notes
+    const feedbackEl = document.getElementById('modalCustFeedback');
+    if (data.feedback_notes && data.feedback_notes.trim() !== '') {
+        feedbackEl.textContent = data.feedback_notes;
+        feedbackEl.style.fontStyle = 'normal';
+        feedbackEl.style.color = data.is_satisfied ? '#ffffff' : '#fca5a5';
+    } else {
+        feedbackEl.textContent = 'لم يترك العميل تعليقاً نصياً مكتوباً، واكتفى باختيار التقييم (راضي / غير راضي) في رسالة الاستبيان.';
+        feedbackEl.style.fontStyle = 'italic';
+        feedbackEl.style.color = '#94a3b8';
+    }
+
+    // Action buttons
+    const cleanPhone = (data.phone || '').replace(/\D/g, '');
+    const waText = encodeURIComponent(`أهلاً بك أستاذ ${data.customer_name || ''}، نتواصل معك من إدارة ${shopBrandName} بخصوص تقييمك لزيارتك لفرع ${data.location_name || ''}...`);
+    document.getElementById('modalWhatsAppBtn').href = `https://wa.me/2${cleanPhone}?text=${waText}`;
+
+    document.getElementById('modalInvoiceBtn').href = `index.php?r=invoice_view&id=${data.invoice_id}`;
+
+    const modal = document.getElementById('customerReviewModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeReviewModal() {
+    const modal = document.getElementById('customerReviewModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeReviewModal();
+    }
+});
 
 function updateLiveSurveyPreview() {
     const textarea = document.getElementById('surveyMessageTextarea');
