@@ -1532,6 +1532,183 @@ function customer_invoices(int $customerId): array
     return $stmt->fetchAll();
 }
 
+function get_customer_todo_stats(?int $locationId = null): array
+{
+    $db = pdo();
+    $sql = "
+        SELECT 
+            COUNT(c.id) as total,
+            SUM(CASE WHEN cf.status = 'contacted' THEN 1 ELSE 0 END) as contacted,
+            SUM(CASE WHEN cf.status = 'contacted' THEN 0 ELSE 1 END) as pending
+        FROM customers c
+        LEFT JOIN customer_followups cf ON cf.customer_id = c.id
+        WHERE c.is_active = 1
+    ";
+    $params = [];
+    if ($locationId !== null && $locationId > 0) {
+        $sql .= " AND (c.location_id = ? OR c.location_id IS NULL)";
+        $params[] = $locationId;
+    }
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $row = $stmt->fetch() ?: ['total' => 0, 'contacted' => 0, 'pending' => 0];
+    $total = (int)($row['total'] ?? 0);
+    $contacted = (int)($row['contacted'] ?? 0);
+    $pending = (int)($row['pending'] ?? 0);
+    $percent = $total > 0 ? (int)round(($contacted / $total) * 100) : 0;
+    return [
+        'total' => $total,
+        'contacted' => $contacted,
+        'pending' => $pending,
+        'percent' => $percent,
+    ];
+}
+
+function get_customer_todo_rows(array $filters = [], ?int $locationId = null): array
+{
+    $db = pdo();
+    $effectiveLocation = 'COALESCE(c.location_id, derived.location_id)';
+    $sql = "
+        SELECT c.*, 
+               {$effectiveLocation} AS effective_location_id,
+               COALESCE(l.name, derived_location.name) AS location_name,
+               COALESCE(cf.status, 'pending') AS followup_status,
+               cf.notes AS followup_notes,
+               cf.contacted_at,
+               cf.contacted_by,
+               u.name AS contacted_by_name,
+               (SELECT MAX(created_at) FROM invoices WHERE customer_id = c.id) as last_invoice_date,
+               (SELECT COUNT(*) FROM invoices WHERE customer_id = c.id) as invoices_count,
+               (SELECT SUM(remaining_amount) FROM customer_debts WHERE customer_id = c.id AND status = 'open') as open_debt
+        FROM customers c
+        LEFT JOIN (
+            SELECT customer_id, MIN(location_id) AS location_id
+            FROM invoices
+            WHERE customer_id IS NOT NULL AND location_id IS NOT NULL
+            GROUP BY customer_id
+        ) derived ON derived.customer_id = c.id
+        LEFT JOIN locations l ON l.id = c.location_id
+        LEFT JOIN locations derived_location ON derived_location.id = derived.location_id
+        LEFT JOIN customer_followups cf ON cf.customer_id = c.id
+        LEFT JOIN users u ON cf.contacted_by = u.id
+        WHERE c.is_active = 1
+    ";
+    $params = [];
+
+    $statusFilter = trim((string)($filters['status'] ?? 'pending'));
+    if ($statusFilter === 'pending') {
+        $sql .= " AND (cf.status IS NULL OR cf.status = 'pending')";
+    } elseif ($statusFilter === 'contacted') {
+        $sql .= " AND cf.status = 'contacted'";
+    }
+
+    $search = trim((string)($filters['q'] ?? ''));
+    if ($search !== '') {
+        $sql .= " AND (c.name LIKE ? OR c.phone LIKE ?)";
+        $like = '%' . $search . '%';
+        $params[] = $like;
+        $params[] = $like;
+    }
+
+    $locId = $locationId !== null ? $locationId : (int)($filters['location_id'] ?? 0);
+    if ($locId > 0) {
+        $sql .= " AND {$effectiveLocation} = ?";
+        $params[] = $locId;
+    }
+
+    $source = trim((string)($filters['source'] ?? ''));
+    if ($source !== '') {
+        $sql .= " AND c.source = ?";
+        $params[] = $source;
+    }
+
+    if ($statusFilter === 'contacted') {
+        $sql .= " ORDER BY cf.contacted_at DESC, c.id DESC";
+    } else {
+        $sql .= " ORDER BY c.id DESC";
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function toggle_customer_followup(int $customerId, ?string $targetStatus = null, ?string $notes = null, ?int $userId = null): array
+{
+    $db = pdo();
+    $cust = find_customer($customerId);
+    if (!$cust) {
+        throw new RuntimeException('العميل غير موجود.');
+    }
+
+    $stmt = $db->prepare("SELECT * FROM customer_followups WHERE customer_id = ?");
+    $stmt->execute([$customerId]);
+    $current = $stmt->fetch();
+
+    $newStatus = $targetStatus;
+    if (!$newStatus) {
+        $newStatus = ($current && $current['status'] === 'contacted') ? 'pending' : 'contacted';
+    }
+
+    $now = date('Y-m-d H:i:s');
+    $contactedAt = ($newStatus === 'contacted') ? $now : null;
+    $contactedBy = ($newStatus === 'contacted') ? $userId : null;
+    $saveNotes = ($notes !== null && trim($notes) !== '') ? trim($notes) : ($current['notes'] ?? null);
+
+    $stmtUp = $db->prepare("
+        INSERT INTO customer_followups (customer_id, status, notes, contacted_by, contacted_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            status = VALUES(status),
+            notes = VALUES(notes),
+            contacted_by = VALUES(contacted_by),
+            contacted_at = VALUES(contacted_at)
+    ");
+    $stmtUp->execute([$customerId, $newStatus, $saveNotes, $contactedBy, $contactedAt]);
+
+    try {
+        $stmtLog = $db->prepare("INSERT INTO customer_followup_logs (customer_id, action, notes, user_id) VALUES (?, ?, ?, ?)");
+        $stmtLog->execute([$customerId, $newStatus, $saveNotes, $userId]);
+    } catch (Throwable $e) {}
+
+    $userName = '';
+    if ($userId) {
+        $u = find_user($userId);
+        if ($u) $userName = $u['name'];
+    }
+
+    return [
+        'customer_id' => $customerId,
+        'status' => $newStatus,
+        'status_label' => $newStatus === 'contacted' ? 'تم التواصل' : 'متبقي',
+        'contacted_at' => $contactedAt ? format_datetime($contactedAt) : '',
+        'contacted_by_name' => $userName,
+        'notes' => $saveNotes ?: '',
+        'stats' => get_customer_todo_stats(),
+    ];
+}
+
+function reset_customer_followups(?int $locationId = null, ?int $userId = null): int
+{
+    $db = pdo();
+    $sql = "UPDATE customer_followups SET status = 'pending', contacted_at = NULL, contacted_by = NULL";
+    $params = [];
+    if ($locationId !== null && $locationId > 0) {
+        $sql .= " WHERE customer_id IN (SELECT id FROM customers WHERE location_id = ?)";
+        $params[] = $locationId;
+    }
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $count = $stmt->rowCount();
+
+    try {
+        $stmtLog = $db->prepare("INSERT INTO customer_followup_logs (customer_id, action, notes, user_id) VALUES (0, 'reset', 'إعادة ضبط دورة الاتصال لجميع العملاء', ?)");
+        $stmtLog->execute([$userId]);
+    } catch (Throwable $e) {}
+
+    return $count;
+}
+
 function customer_recent_invoices_for_pos(?int $customerId, ?int $locationId = null, int $limit = 20, ?string $searchQuery = null): array
 {
     $db = pdo();

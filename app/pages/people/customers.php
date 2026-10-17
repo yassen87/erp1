@@ -60,9 +60,12 @@ $renderPagination = static function (string $pageParam, int $page, int $pages, i
     <p>سجل العملاء مع فلترة حسب البحث وتاريخ الإضافة والفرع التابع للعميل.</p>
 </section>
 
-<div class="panel toolbar" style="justify-content: space-between;">
-    <div class="actions">
+<div class="panel toolbar" style="justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+    <div class="actions" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
         <a class="btn <?= $view === 'list' ? 'primary' : '' ?>" href="index.php?r=customers&view=list">سجل العملاء</a>
+        <a class="btn" href="index.php?r=customer_todo" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 800; border: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16,185,129,0.25);">
+            📋 قائمة المهام والمتابعة (To-Do List)
+        </a>
         <a class="btn" href="index.php?r=customers_debts">الديون المفتوحة</a>
         <?php if (has_permission('customers_add')): ?>
             <a class="btn <?= $view === 'add' ? 'primary' : '' ?>" href="index.php?r=customers&view=add">إضافة عميل</a>
@@ -132,24 +135,41 @@ $renderPagination = static function (string $pageParam, int $page, int $pages, i
                     <tr><td colspan="7" class="muted" style="text-align: center;">لا توجد نتائج مطابقة.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($pagedCustomers as $c): ?>
+                    <?php $waPhone = clean_whatsapp_phone($c['phone']); ?>
                     <tr>
-                        <td><?= e($c['name']) ?></td>
-                        <td><?= e($c['phone']) ?></td>
+                        <td><strong><?= e($c['name']) ?></strong></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span dir="ltr" style="font-weight: 600;"><?= e($c['phone'] ?: '-') ?></span>
+                                <?php if ($waPhone): ?>
+                                    <a href="https://wa.me/<?= e($waPhone) ?>?text=<?= urlencode('أهلاً بك أستاذ ' . $c['name']) ?>" 
+                                       target="_blank" 
+                                       class="btn small" 
+                                       style="background: #25D366; color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 1px 3px rgba(37,211,102,0.3);" 
+                                       title="محادثة واتساب مباشرة">
+                                        💬 واتس
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </td>
                         <td><?= e($c['birthdate'] ? date('d-m-Y', strtotime($c['birthdate'])) : '-') ?></td>
                         <td><?= e($c['source']) ?></td>
                         <td><?= e($c['location_name'] ?? 'غير محدد') ?></td>
                         <td><?= e(format_datetime($c['created_at'])) ?></td>
                         <td><?= e($c['notes']) ?></td>
                         <td>
-                            <a class="btn small" href="index.php?r=customer_view&id=<?= e($c['id']) ?>">ملف العميل</a>
-                            <?php if (has_permission('customers_edit')): ?>
-                                <form method="post" class="inline" onsubmit="return confirm('هل أنت متأكد من رغبتك في حذف هذا العميل؟')">
-                                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="id" value="<?= e($c['id']) ?>">
-                                    <button class="btn small danger">حذف</button>
-                                </form>
-                            <?php endif; ?>
+                            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                                <a class="btn small" href="index.php?r=customer_view&id=<?= e($c['id']) ?>" title="عرض ملف وسجل العميل">الملف</a>
+                                <a class="btn small" href="index.php?r=customer_todo&q=<?= urlencode($c['phone'] ?: $c['name']) ?>" title="متابعة في قائمة المهام" style="background: rgba(16,185,129,0.12); color: #047857; border: 1px solid rgba(16,185,129,0.35); font-weight: bold;">📋 متابعة</a>
+                                <?php if (has_permission('customers_edit')): ?>
+                                    <form method="post" class="inline" onsubmit="return confirm('هل أنت متأكد من رغبتك في حذف هذا العميل؟')">
+                                        <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= e($c['id']) ?>">
+                                        <button class="btn small danger">حذف</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>

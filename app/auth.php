@@ -63,6 +63,7 @@ function has_permission(string $permission): bool
         'transfers_supply_create' => 'transfers_supply',
         'returns'            => 'invoices',
         'customers'          => 'customers_view',
+        'customer_todo'      => 'customers_view',
         'customers_debts'    => 'customers_view',
         'call_center'        => 'customers_view',
         'customer_birthdays' => 'customers_view',

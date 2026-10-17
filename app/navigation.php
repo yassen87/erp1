@@ -48,6 +48,7 @@ function nav_sections(): array
             'dir' => 'people',
             'items' => [
                 ['route' => 'customers', 'label' => 'العملاء'],
+                ['route' => 'customer_todo', 'label' => 'قائمة مهام ومتابعة العملاء 📋'],
                 ['route' => 'customers_debts', 'label' => 'الديون المفتوحة'],
                 ['route' => 'call_center', 'label' => 'الكول سنتر'],
                 ['route' => 'customer_birthdays', 'label' => 'أعياد ميلاد العملاء 🎂'],

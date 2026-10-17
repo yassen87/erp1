@@ -429,3 +429,19 @@ function calculate_distance(float $lat1, float $lng1, float $lat2, float $lng2):
         cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
     return $angle * $earthRadius;
 }
+
+function clean_whatsapp_phone(?string $phone): string
+{
+    $clean = preg_replace('/\D/', '', (string)$phone);
+    if ($clean === '') {
+        return '';
+    }
+    if (str_starts_with($clean, '0')) {
+        return '2' . $clean;
+    }
+    if (!str_starts_with($clean, '2') && strlen($clean) === 10) {
+        return '20' . $clean;
+    }
+    return $clean;
+}
+

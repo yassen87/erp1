@@ -81,6 +81,39 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
+    if ($route === 'api_toggle_customer_todo') {
+        require_login();
+        if (!has_permission('customers_view')) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'غير مصرح']);
+            exit;
+        }
+
+        $user = current_user();
+        $customerId = (int) ($_POST['customer_id'] ?? $_GET['customer_id'] ?? 0);
+        $status = isset($_POST['status']) && $_POST['status'] !== '' ? trim((string)$_POST['status']) : null;
+        $notes = isset($_POST['notes']) ? trim((string)$_POST['notes']) : null;
+
+        if ($customerId <= 0) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'معرف العميل غير صالح']);
+            exit;
+        }
+
+        try {
+            $result = toggle_customer_followup($customerId, $status, $notes, (int)$user['id']);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'data' => $result]);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     if ($route === 'api_get_off_orders') {
         require_login();
         header('Content-Type: application/json; charset=utf-8');
@@ -859,6 +892,28 @@ function handle_post(string $route, array $user): void
             flash('تم إضافة العميل.');
         }
         redirect('customers');
+    }
+
+    if ($route === 'customer_todo' && has_permission('customers_view')) {
+        $action = post_string('action');
+        if ($action === 'toggle') {
+            $customerId = (int) post_string('customer_id');
+            $status = post_string('status') ?: null;
+            $notes = post_string('notes') ?: null;
+            toggle_customer_followup($customerId, $status, $notes, (int)$user['id']);
+            flash('تم تحديث حالة المتابعة للعميل بنجاح.');
+        } elseif ($action === 'reset') {
+            if ($user['role_code'] !== 'admin' && $user['role_code'] !== 'branch_manager') {
+                throw new RuntimeException('غير مصرح لك بإعادة ضبط قائمة المتابعة.');
+            }
+            $locId = current_user_location_id();
+            $cnt = reset_customer_followups($locId, (int)$user['id']);
+            flash('تمت إعادة ضبط قائمة المتابعة بنجاح (تم تحويل ' . $cnt . ' عميل إلى متبقي).');
+        }
+        $params = $_GET;
+        unset($params['action'], $params['customer_id'], $params['status'], $params['notes']);
+        $queryStr = http_build_query(array_diff_key($params, ['r' => '']));
+        redirect('customer_todo' . ($queryStr ? '&' . $queryStr : ''));
     }
 
     if ($route === 'customer_birthdays' && has_permission('customers_view')) {
