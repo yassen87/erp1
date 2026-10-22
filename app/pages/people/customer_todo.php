@@ -249,6 +249,30 @@ $buildPaginationUrl = function (int $targetPage) use ($tab, $search, $locationFi
     box-shadow: 0 4px 10px rgba(37, 211, 102, 0.4);
 }
 
+/* Computer Call Button */
+.btn-call-direct {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff !important;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    white-space: nowrap;
+}
+.btn-call-direct:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.45);
+}
+
 .note-preview {
     font-size: 11.5px;
     color: var(--muted);
@@ -276,8 +300,14 @@ $buildPaginationUrl = function (int $targetPage) use ($tab, $search, $locationFi
             </p>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+            <button type="button" class="btn" onclick="openPhoneLinkHelpModal()" style="background: rgba(37,99,235,0.12); color: #2563eb; border: 1.5px solid rgba(37,99,235,0.35); font-weight: 700;">
+                ℹ️ الاتصال بالكمبيوتر (Phone Link)
+            </button>
+            <a href="index.php?r=call_center" class="btn" style="background: rgba(201, 168, 76, 0.15); color: var(--gold-dark); border: 1.5px solid var(--gold); font-weight: 700;">
+                🎧 الكول سنتر
+            </a>
             <a href="index.php?r=customers" class="btn" style="background: var(--surface); color: var(--ink); border: 1px solid var(--line); font-weight: 700;">
-                👥 سجل العملاء الرئيسي
+                👥 سجل العملاء
             </a>
             <?php if ($currentUser['role_code'] === 'admin' || $currentUser['role_code'] === 'branch_manager'): ?>
                 <form method="post" class="inline" onsubmit="return confirm('هل أنت متأكد من إعادة ضبط قائمة المتابعة لجميع العملاء؟\nسيتم تحويل الجميع إلى (متبقي للاتصال) لبدء دورة جديدة.')">
@@ -460,6 +490,14 @@ $buildPaginationUrl = function (int $targetPage) use ($tab, $search, $locationFi
                         <td>
                             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span dir="ltr" style="font-weight: 700; font-size: 13.5px; color: var(--ink);"><?= e($row['phone'] ?: '-') ?></span>
+                                <?php if (!empty($row['phone'])): ?>
+                                    <button type="button" 
+                                            class="btn-call-direct" 
+                                            onclick="startDirectComputerCall(<?= (int)$row['id'] ?>, '<?= e(addslashes($row['name'])) ?>', '<?= e(addslashes(clean_dial_phone($row['phone']))) ?>')"
+                                            title="اتصال صوتي فوري من الكمبيوتر عبر Phone Link">
+                                        <span>📞 اتصال</span>
+                                    </button>
+                                <?php endif; ?>
                                 <?php if ($waPhone): ?>
                                     <a href="https://wa.me/<?= e($waPhone) ?>?text=<?= urlencode($greeting) ?>" 
                                        target="_blank" 
@@ -467,12 +505,6 @@ $buildPaginationUrl = function (int $targetPage) use ($tab, $search, $locationFi
                                        onclick="onWhatsAppClick(<?= (int)$row['id'] ?>)"
                                        title="فتح محادثة واتساب ويب / الموبايل مباشرة">
                                         <span>💬 واتساب</span>
-                                    </a>
-                                    <a href="tel:<?= e($row['phone']) ?>" 
-                                       class="btn small" 
-                                       style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line); font-size: 11px;" 
-                                       title="اتصال هاتفي">
-                                        📞
                                     </a>
                                 <?php endif; ?>
                             </div>
@@ -720,4 +752,275 @@ async function saveNoteModal() {
 document.getElementById('todoNoteModal')?.addEventListener('click', function(e) {
     if (e.target === this) closeNoteModal();
 });
+
+// Phone Link Help Modal Logic
+function openPhoneLinkHelpModal() {
+    document.getElementById('phoneLinkHelpModal').style.display = 'flex';
+}
+function closePhoneLinkHelpModal() {
+    document.getElementById('phoneLinkHelpModal').style.display = 'none';
+}
+
+// Computer Direct Call Assistant Logic
+let callTimerInterval = null;
+let callDurationSec = 0;
+let activeCallCustomerId = null;
+let activeCallCustomerName = '';
+let activeCallPhone = '';
+
+function startDirectComputerCall(customerId, customerName, phone) {
+    if (!phone) {
+        alert('هذا العميل ليس لديه رقم هاتف مسجل!');
+        return;
+    }
+
+    activeCallCustomerId = customerId;
+    activeCallCustomerName = customerName;
+    activeCallPhone = phone;
+    callDurationSec = 0;
+
+    // Trigger Phone Link / Windows default dialer
+    window.location.href = 'tel:' + phone;
+
+    // Setup active call assistant UI
+    document.getElementById('activeCallCustName').textContent = customerName;
+    document.getElementById('activeCallCustPhone').textContent = phone;
+    document.getElementById('activeCallTimer').textContent = '00:00';
+    document.getElementById('activeCallNotes').value = '';
+    document.getElementById('callAssistantModal').style.display = 'flex';
+
+    // Start live timer
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+        callDurationSec++;
+        const mins = String(Math.floor(callDurationSec / 60)).padStart(2, '0');
+        const secs = String(callDurationSec % 60).padStart(2, '0');
+        document.getElementById('activeCallTimer').textContent = `${mins}:${secs}`;
+    }, 1000);
+}
+
+function closeCallAssistant() {
+    if (callTimerInterval) {
+        clearInterval(callTimerInterval);
+        callTimerInterval = null;
+    }
+    document.getElementById('callAssistantModal').style.display = 'none';
+}
+
+async function submitCallOutcome(outcome) {
+    if (!activeCallCustomerId) return;
+    const customerId = activeCallCustomerId;
+    const notes = document.getElementById('activeCallNotes').value.trim();
+    const duration = callDurationSec;
+
+    // UI feedback
+    const modalContent = document.getElementById('callAssistantContent');
+    if (modalContent) modalContent.style.opacity = '0.5';
+
+    try {
+        const formData = new FormData();
+        formData.append('customer_id', customerId);
+        formData.append('outcome', outcome);
+        formData.append('notes', notes);
+        formData.append('duration', duration);
+
+        const response = await fetch('index.php?r=api_log_customer_call', {
+            method: 'POST',
+            body: formData
+        });
+
+        const res = await response.json();
+        if (!res.success) {
+            alert(res.message || 'حدث خطأ أثناء تسجيل نتيجة المكالمة.');
+            return;
+        }
+
+        const data = res.data;
+        const isContacted = (data.status === 'contacted');
+
+        // Update button
+        const btn = document.getElementById(`btn-status-${customerId}`);
+        if (btn) {
+            btn.className = `btn-toggle-todo ${isContacted ? 'is-contacted' : 'is-pending'}`;
+            btn.title = isContacted ? 'تم التواصل بنجاح - اضغط للإلغاء' : 'اضغط لوضع علامة (صح) وإتمام التواصل';
+            btn.querySelector('.status-icon').textContent = isContacted ? '✅ تم التواصل' : '⚪ تم الاتصال؟';
+        }
+
+        // Update row style
+        const row = document.getElementById(`row-cust-${customerId}`);
+        if (row) {
+            row.className = isContacted ? 'row-contacted' : 'row-pending';
+            const currentTab = '<?= e($tab) ?>';
+            if (currentTab === 'pending' && isContacted) {
+                row.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                row.style.opacity = '0.35';
+            }
+        }
+
+        // Update status info cell
+        const infoCell = document.getElementById(`status-info-${customerId}`);
+        if (infoCell) {
+            if (isContacted) {
+                infoCell.innerHTML = `
+                    <span style="color: #059669; font-weight: 800; font-size: 12px; display: block;">✅ تم التواصل</span>
+                    <small class="muted" style="font-size: 10.5px;">${data.contacted_by_name ? data.contacted_by_name + ' | ' : ''}${data.contacted_at}</small>
+                `;
+            } else {
+                infoCell.innerHTML = `<span style="color: #d97706; font-weight: 700; font-size: 12px;">⏳ بانتظار الاتصال</span>`;
+            }
+        }
+
+        // Update notes cell
+        const preview = document.getElementById(`notes-text-${customerId}`);
+        if (preview && data.notes) {
+            preview.textContent = data.notes;
+        }
+
+        // Live update stats cards
+        if (data.stats) {
+            const elTotal = document.getElementById('stat-total');
+            const elPending = document.getElementById('stat-pending');
+            const elContacted = document.getElementById('stat-contacted');
+            const elPercent = document.getElementById('stat-percent');
+            const elBar = document.getElementById('stat-progress-bar');
+
+            if (elTotal) elTotal.textContent = Number(data.stats.total).toLocaleString('en-US');
+            if (elPending) elPending.textContent = Number(data.stats.pending).toLocaleString('en-US');
+            if (elContacted) elContacted.textContent = Number(data.stats.contacted).toLocaleString('en-US');
+            if (elPercent) elPercent.textContent = data.stats.percent + '%';
+            if (elBar) elBar.style.width = data.stats.percent + '%';
+        }
+
+        closeCallAssistant();
+
+    } catch (e) {
+        console.error(e);
+        alert('تعذر حفظ نتيجة المكالمة.');
+    } finally {
+        if (modalContent) modalContent.style.opacity = '1';
+    }
+}
 </script>
+
+<!-- Live Call Assistant Modal -->
+<div id="callAssistantModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div id="callAssistantContent" style="background: var(--surface); border: 2px solid #2563eb; border-radius: 20px; max-width: 520px; width: 100%; padding: 24px; box-shadow: 0 20px 40px rgba(37,99,235,0.25); position: relative;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--line); padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 26px;">🎧</span>
+                <div>
+                    <h3 style="margin: 0; font-size: 17px; color: #1d4ed8;">مكالمة صوتية نشطة من الكمبيوتر</h3>
+                    <small style="color: var(--muted); font-size: 11.5px;">تحدث عبر سماعة ومايك الكمبيوتر بواسطة Windows Phone Link</small>
+                </div>
+            </div>
+            <button type="button" onclick="closeCallAssistant()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted);">&times;</button>
+        </div>
+
+        <!-- Customer & Live Timer Box -->
+        <div style="background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(29,78,216,0.04)); border: 1.5px solid rgba(37,99,235,0.25); border-radius: 14px; padding: 16px; margin-bottom: 18px; text-align: center;">
+            <div style="font-size: 18px; font-weight: 800; color: var(--ink);" id="activeCallCustName">اسم العميل</div>
+            <div dir="ltr" style="font-size: 15px; font-weight: 700; color: #2563eb; margin: 4px 0 8px;" id="activeCallCustPhone">010XXXXXXXX</div>
+            
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: #fff; padding: 6px 16px; border-radius: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid rgba(37,99,235,0.2);">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; animation: pulseCall 1.2s infinite;"></span>
+                <span style="font-weight: 800; font-size: 18px; color: #1e3a8a; font-family: monospace;" id="activeCallTimer">00:00</span>
+            </div>
+        </div>
+
+        <style>
+        @keyframes pulseCall {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.15); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        </style>
+
+        <!-- Fast Call Outcome Action Buttons -->
+        <div style="margin-bottom: 14px;">
+            <label style="display: block; font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 8px;">
+                اختر نتيجة المكالمة لحفظها فوراً:
+            </label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button type="button" class="btn" onclick="submitCallOutcome('answered_agreed')" style="background: #059669; color: #fff; font-weight: 800; padding: 10px 8px; font-size: 13px; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                    <span>✅ تم الرد والاتفاق (صح)</span>
+                </button>
+                <button type="button" class="btn" onclick="submitCallOutcome('no_answer')" style="background: #d97706; color: #fff; font-weight: 700; padding: 10px 8px; font-size: 13px; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>⏳ لم يرد / رن ولم يجب</span>
+                </button>
+                <button type="button" class="btn" onclick="submitCallOutcome('busy')" style="background: #64748b; color: #fff; font-weight: 700; padding: 10px 8px; font-size: 13px; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>📴 مشغول أو مغلق</span>
+                </button>
+                <button type="button" class="btn" onclick="submitCallOutcome('wrong_number')" style="background: #dc2626; color: #fff; font-weight: 700; padding: 10px 8px; font-size: 13px; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <span>❌ رقم غير صحيح / متاح</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Optional Call Notes -->
+        <div style="margin-bottom: 16px;">
+            <input type="text" id="activeCallNotes" placeholder="ملاحظة سريعة إضافية عن المكالمة (اختياري)..." style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); font-size: 13px;">
+        </div>
+
+        <!-- Bottom Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" class="btn" onclick="closeCallAssistant()" style="background: var(--surface-soft); color: var(--muted); border: 1px solid var(--line); font-size: 12.5px;">
+                إلغاء وإغلاق النافذة
+            </button>
+            <button type="button" class="btn primary" onclick="submitCallOutcome('general')" style="font-size: 12.5px; font-weight: 700;">
+                💾 حفظ الملاحظة فقط
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Phone Link Setup Help Modal -->
+<div id="phoneLinkHelpModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 16px;">
+    <div style="background: var(--surface); border: 2px solid var(--gold); border-radius: 20px; max-width: 560px; width: 100%; padding: 26px; box-shadow: 0 20px 45px rgba(0,0,0,0.3); position: relative;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--line); padding-bottom: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 26px;">💻📱</span>
+                <h3 style="margin: 0; font-size: 18px; color: var(--gold-dark);">كيف تتصل من الكمبيوتر عبر Phone Link؟</h3>
+            </div>
+            <button type="button" onclick="closePhoneLinkHelpModal()" style="background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted);">&times;</button>
+        </div>
+
+        <p style="font-size: 13.5px; line-height: 1.6; color: var(--ink); margin-bottom: 16px;">
+            تطبيق <strong>Phone Link (ربط الهاتف)</strong> هو برنامج مجاني ورسمي مدمج في ويندوز (10 و 11)، يتيح لك ربط موبايل الشغل بالكمبيوتر والتحدث من سماعة ومايك الكمبيوتر مباشرة:
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 12px; background: rgba(37,99,235,0.06); border: 1px solid rgba(37,99,235,0.2); border-radius: 12px; padding: 12px;">
+                <span style="font-size: 22px; font-weight: 800; color: #2563eb;">1</span>
+                <div>
+                    <strong style="color: #1e3a8a; font-size: 14px;">افتح تطبيق Phone Link على جهاز الكمبيوتر:</strong>
+                    <div style="font-size: 12.5px; color: var(--muted); margin-top: 2px;">ابحث في قائمة ابدأ (Start) عن <strong>Phone Link</strong> أو <strong>ربط الهاتف</strong>.</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 12px;">
+                <span style="font-size: 22px; font-weight: 800; color: #059669;">2</span>
+                <div>
+                    <strong style="color: #065f46; font-size: 14px;">اربط موبايلك بالكمبيوتر:</strong>
+                    <div style="font-size: 12.5px; color: var(--muted); margin-top: 2px;">افتح تطبيق Link to Windows على الموبايل وامسح كود الـ QR، وتأكد من تفعيل البلوتوث لإجراء المكالمات.</div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; background: rgba(201,168,76,0.08); border: 1px solid var(--gold-soft); border-radius: 12px; padding: 12px;">
+                <span style="font-size: 22px; font-weight: 800; color: var(--gold-dark);">3</span>
+                <div>
+                    <strong style="color: var(--gold-dark); font-size: 14px;">اضغط على (📞 اتصال) في السيستم:</strong>
+                    <div style="font-size: 12.5px; color: var(--muted); margin-top: 2px;">بمجرد الضغط على أي زر اتصال بالسيستم، سيرن الموبايل تلقائياً وتتحدث من سماعة ومايك الكمبيوتر بدون لمس الموبايل!</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <button type="button" class="btn primary" onclick="closePhoneLinkHelpModal()" style="font-weight: 700; padding: 8px 24px;">
+                فهمت، شكراً لك! 👍
+            </button>
+        </div>
+    </div>
+</div>
+

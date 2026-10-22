@@ -19,6 +19,17 @@ $userLocationId = current_user_location_id();
         <p>فواتير العميل، الديون، والملاحظات مع إمكانية تسجيل ديون مباشرة وسدادها.</p>
     </div>
     <div class="actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <?php if (!empty($customer['phone'])): ?>
+            <a class="btn" href="tel:<?= e(clean_dial_phone($customer['phone'])) ?>" style="background: #2563eb; color: #fff; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;" title="اتصال صوتي مباشر من الكمبيوتر عبر Phone Link">
+                📞 اتصال من الكمبيوتر
+            </a>
+            <?php $waCust = clean_whatsapp_phone($customer['phone']); ?>
+            <?php if ($waCust): ?>
+                <a class="btn" href="https://wa.me/<?= e($waCust) ?>" target="_blank" style="background: #25D366; color: #fff; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                    💬 واتساب
+                </a>
+            <?php endif; ?>
+        <?php endif; ?>
         <button type="button" class="btn primary" onclick="openDirectDebtModal()" style="font-weight: 700;">➕ تسجيل دين مباشر</button>
         <a class="btn" href="index.php?r=customers">رجوع للعملاء</a>
         <?php if (has_permission('customers_edit')): ?>

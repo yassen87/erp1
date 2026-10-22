@@ -114,6 +114,40 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
+    if ($route === 'api_log_customer_call') {
+        require_login();
+        if (!has_permission('customers_view')) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'غير مصرح']);
+            exit;
+        }
+
+        $user = current_user();
+        $customerId = (int) ($_POST['customer_id'] ?? $_GET['customer_id'] ?? 0);
+        $outcome = trim((string)($_POST['outcome'] ?? 'answered_agreed'));
+        $notes = isset($_POST['notes']) ? trim((string)$_POST['notes']) : null;
+        $duration = (int)($_POST['duration'] ?? 0);
+
+        if ($customerId <= 0) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'معرف العميل غير صالح']);
+            exit;
+        }
+
+        try {
+            $result = log_customer_call_outcome($customerId, $outcome, $notes, (int)$user['id'], $duration);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'data' => $result]);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     if ($route === 'api_get_off_orders') {
         require_login();
         header('Content-Type: application/json; charset=utf-8');

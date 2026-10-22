@@ -1709,6 +1709,88 @@ function reset_customer_followups(?int $locationId = null, ?int $userId = null):
     return $count;
 }
 
+function log_customer_call_outcome(int $customerId, string $outcome, ?string $callNotes = null, ?int $userId = null, int $durationSeconds = 0): array
+{
+    $db = pdo();
+    $cust = find_customer($customerId);
+    if (!$cust) {
+        throw new RuntimeException('العميل غير موجود.');
+    }
+
+    $outcomeLabels = [
+        'answered_agreed' => 'تم الرد والاتفاق',
+        'no_answer'       => 'لم يرد / لا إجابة',
+        'busy'            => 'الخط مشغول أو مغلق',
+        'wrong_number'    => 'الرقم غير صحيح أو خارج الخدمة',
+        'general'         => 'مكالمة هاتفية',
+    ];
+    $label = $outcomeLabels[$outcome] ?? 'مكالمة هاتفية';
+
+    $durationText = '';
+    if ($durationSeconds > 0) {
+        $mins = (int) floor($durationSeconds / 60);
+        $secs = $durationSeconds % 60;
+        $durationText = sprintf(' (المدة: %02d:%02d)', $mins, $secs);
+    }
+
+    $logNote = "[مكالمة صوتية من الكمبيوتر{$durationText}]: {$label}";
+    if ($callNotes !== null && trim($callNotes) !== '') {
+        $logNote .= ' - ' . trim($callNotes);
+    }
+
+    $targetStatus = ($outcome === 'answered_agreed') ? 'contacted' : 'pending';
+
+    $stmtCur = $db->prepare("SELECT status, notes, contacted_at, contacted_by FROM customer_followups WHERE customer_id = ?");
+    $stmtCur->execute([$customerId]);
+    $current = $stmtCur->fetch();
+
+    if ($current && $current['status'] === 'contacted' && $outcome !== 'answered_agreed') {
+        $targetStatus = 'contacted';
+    }
+
+    $combinedNotes = $logNote;
+    if ($current && !empty($current['notes'])) {
+        $combinedNotes = $current['notes'] . " \n• " . $logNote;
+    }
+
+    $now = date('Y-m-d H:i:s');
+    $contactedAt = ($targetStatus === 'contacted') ? $now : ($current['contacted_at'] ?? null);
+    $contactedBy = ($targetStatus === 'contacted') ? $userId : ($current['contacted_by'] ?? null);
+
+    $stmtUp = $db->prepare("
+        INSERT INTO customer_followups (customer_id, status, notes, contacted_by, contacted_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            status = VALUES(status),
+            notes = VALUES(notes),
+            contacted_by = VALUES(contacted_by),
+            contacted_at = VALUES(contacted_at)
+    ");
+    $stmtUp->execute([$customerId, $targetStatus, $combinedNotes, $contactedBy, $contactedAt]);
+
+    try {
+        $stmtLog = $db->prepare("INSERT INTO customer_followup_logs (customer_id, action, notes, user_id) VALUES (?, ?, ?, ?)");
+        $stmtLog->execute([$customerId, $targetStatus, $logNote, $userId]);
+    } catch (Throwable $e) {}
+
+    $userName = '';
+    if ($userId) {
+        $u = find_user($userId);
+        if ($u) $userName = $u['name'];
+    }
+
+    return [
+        'customer_id'       => $customerId,
+        'outcome'           => $outcome,
+        'status'            => $targetStatus,
+        'status_label'      => $targetStatus === 'contacted' ? 'تم التواصل' : 'متبقي',
+        'contacted_at'      => $contactedAt ? format_datetime($contactedAt) : '',
+        'contacted_by_name' => $userName,
+        'notes'             => $combinedNotes,
+        'stats'             => get_customer_todo_stats(),
+    ];
+}
+
 function customer_recent_invoices_for_pos(?int $customerId, ?int $locationId = null, int $limit = 20, ?string $searchQuery = null): array
 {
     $db = pdo();

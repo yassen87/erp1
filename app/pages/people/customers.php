@@ -141,6 +141,14 @@ $renderPagination = static function (string $pageParam, int $page, int $pages, i
                         <td>
                             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                 <span dir="ltr" style="font-weight: 600;"><?= e($c['phone'] ?: '-') ?></span>
+                                <?php if (!empty($c['phone'])): ?>
+                                    <a href="tel:<?= e(clean_dial_phone($c['phone'])) ?>" 
+                                       class="btn small" 
+                                       style="background: #2563eb; color: #fff; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 1px 3px rgba(37,99,235,0.3);" 
+                                       title="اتصال صوتي فوري من الكمبيوتر عبر Phone Link">
+                                        📞 اتصال
+                                    </a>
+                                <?php endif; ?>
                                 <?php if ($waPhone): ?>
                                     <a href="https://wa.me/<?= e($waPhone) ?>?text=<?= urlencode('أهلاً بك أستاذ ' . $c['name']) ?>" 
                                        target="_blank" 

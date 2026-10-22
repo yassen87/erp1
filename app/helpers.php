@@ -445,3 +445,8 @@ function clean_whatsapp_phone(?string $phone): string
     return $clean;
 }
 
+function clean_dial_phone(?string $phone): string
+{
+    return preg_replace('/[^\d+]/', '', (string)$phone);
+}
+
