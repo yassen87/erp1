@@ -379,6 +379,59 @@ html[dir="ltr"] .nav-section-panel a.active:before {
   border-color: transparent;
 }
 
+/* زر الرجوع العام لجميع الصفحات */
+.btn-global-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 12px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.btn-global-back:hover {
+  background: var(--primary-soft, #efe1bf);
+  border-color: var(--primary, #b98418);
+  color: var(--primary-dark, #6f4a08);
+  transform: translateX(2px);
+  box-shadow: 0 3px 8px rgba(185,132,24,0.18);
+}
+
+.btn-global-back:active {
+  transform: scale(0.96);
+}
+
+.btn-global-back .back-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.btn-global-back .back-text {
+  line-height: 1;
+}
+
+:root[data-theme="dark"] .btn-global-back {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(201,168,76,0.3);
+  color: #f5eedf;
+}
+
+:root[data-theme="dark"] .btn-global-back:hover {
+  background: rgba(201,168,76,0.2);
+  border-color: var(--gold, #c9a84c);
+  color: #fff;
+}
+
 .page-shell {
   animation: fadeUp .22s ease both;
 }

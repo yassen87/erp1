@@ -623,6 +623,8 @@ CREATE TABLE IF NOT EXISTS offer_items (
   quantity DECIMAL(12,3) NOT NULL DEFAULT 1.000,
   bottle_product_id INT NULL,
   recipe_name VARCHAR(180) NULL,
+  oil_category VARCHAR(40) NULL DEFAULT 'any',
+  allowed_families VARCHAR(255) NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_offer_items_offer (offer_id),
   CONSTRAINT fk_offer_items_offer FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE,

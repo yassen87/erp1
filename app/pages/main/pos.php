@@ -2412,6 +2412,8 @@ option.low-stock {
                         recipe_name: it.recipe_name || 'تركيبة خاصة',
                         bottle_id: it.bottle_product_id ? parseInt(it.bottle_product_id) : 'no_bottle',
                         quantity: parseFloat(it.quantity) || 1,
+                        oil_category: it.oil_category || 'any',
+                        allowed_families: it.allowed_families || '',
                         oils: oils.length > 0 ? oils : [{ perfume_id: 0, perfume_name: '', grams: 15, price_per_gram: 0 }]
                     });
                 }
@@ -2511,14 +2513,17 @@ option.low-stock {
                     savedRecipesOptions += `<option value="${r.id}">${r.name} - (${parseFloat(r.default_sale_price || 0).toFixed(2)} ج.م)</option>`;
                 });
 
+                const FAMILIES_AR = { 'oriental': 'شرقي', 'french': 'فرنسي', 'niche': 'نيش', 'niche_liter': 'الترا نيش', 'unilateral': 'احادي' };
+
                 let oilsHtml = '';
                 (item.oils || []).forEach((oil, oilIdx) => {
                     let perfOptions = `<option value="">-- اختر الزيت العطري --</option>`;
                     allPerfumes.forEach(p => {
                         const isPerfSel = (p.id == oil.perfume_id);
+                        const famLabel = FAMILIES_AR[p.perfume_family] || p.perfume_family || '-';
                         perfOptions += `
-                            <option value="${p.id}" ${isPerfSel ? 'selected' : ''} data-name="${p.name}" data-price="${p.price_per_gram || p.sale_price}">
-                                ${p.name} (${p.quality_grade || '-'}) - (${(p.price_per_gram || p.sale_price || 0)} ج.م/جم)
+                            <option value="${p.id}" ${isPerfSel ? 'selected' : ''} data-name="${p.name}" data-price="${p.price_per_gram || p.sale_price}" data-family="${p.perfume_family || ''}">
+                                ${p.name} [${famLabel}] (${p.quality_grade || '-'}) - (${(p.price_per_gram || p.sale_price || 0)} ج.م/جم)
                             </option>
                         `;
                     });
@@ -2541,6 +2546,22 @@ option.low-stock {
                 const totalGrams = (item.oils || []).reduce((s, o) => s + (parseFloat(o.grams) || 0), 0);
                 const bottleSize = bottleProduct ? (bottleProduct.size_ml || '-') : '-';
 
+                let reqNotice = '';
+                if (item.oil_category && item.oil_category !== 'any') {
+                    let famNames = '';
+                    if (item.oil_category === 'mixed' && item.allowed_families) {
+                        famNames = item.allowed_families.split(',').map(f => FAMILIES_AR[f] || f).join(' و ');
+                    } else {
+                        famNames = FAMILIES_AR[item.oil_category] || item.oil_category;
+                    }
+                    reqNotice = `
+                        <div style="background: rgba(201,168,76,0.12); border: 1.5px dashed var(--gold, #c9a84c); border-radius: 8px; padding: 6px 12px; margin-bottom: 10px; font-size: 12px; font-weight: 700; color: var(--gold-dark, #b98418); display: flex; align-items: center; gap: 6px;">
+                            <span>🏷️ شروط العرض:</span>
+                            <span>الزيوت المسموح بها في هذه التركيبة يجب أن تكون من تصنيف: <strong style="color: var(--primary); text-decoration: underline;">(${famNames})</strong> فقط.</span>
+                        </div>
+                    `;
+                }
+
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed var(--line); padding-bottom: 8px;">
                         <div>
@@ -2549,6 +2570,8 @@ option.low-stock {
                         </div>
                         <span class="badge" style="background: rgba(185,132,24,0.15); color: var(--gold-dark); font-weight: 700;">تركيبة زجاجة</span>
                     </div>
+
+                    ${reqNotice}
 
                     <!-- 1. Bottle Selector & Substitution -->
                     <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; margin-bottom: 12px;">
@@ -2666,6 +2689,8 @@ option.low-stock {
     function saveOfferCustomizationToCart() {
         if (!currentCustomOffer) return;
 
+        const FAMILIES_AR = { 'oriental': 'شرقي', 'french': 'فرنسي', 'niche': 'نيش', 'niche_liter': 'الترا نيش', 'unilateral': 'احادي' };
+
         for (let i = 0; i < currentCustomOffer.items.length; i++) {
             const it = currentCustomOffer.items[i];
             if (it.item_type === 'recipe') {
@@ -2677,6 +2702,22 @@ option.low-stock {
                 if (validOils.length === 0) {
                     alert(`الرجاء إضافة زيت عطري واحد على الأقل وتحديد الجرامات لـ ${it.recipe_name || 'التركيبة ' + (i+1)}`);
                     return;
+                }
+
+                // التحقق من تصنيف الزيوت المسموح بها في هذا العرض
+                if (it.oil_category && it.oil_category !== 'any') {
+                    const allowedFamilies = it.allowed_families ? it.allowed_families.split(',').map(f => f.trim()).filter(Boolean) : [it.oil_category];
+                    const requiredFamiliesLabel = allowedFamilies.map(f => FAMILIES_AR[f] || f).join(' و ');
+
+                    for (const o of validOils) {
+                        const perfObj = (ALL_PRODUCTS_OFFLINE || []).find(p => p.id == o.perfume_id);
+                        const perfFamily = perfObj ? (perfObj.perfume_family || '') : '';
+                        if (!perfFamily || !allowedFamilies.includes(perfFamily)) {
+                            const oilFamilyLabel = FAMILIES_AR[perfFamily] || perfFamily || 'غير محدد';
+                            alert(`⚠️ لا يمكن تطبيق هذا العرض!\n\nهذا العرض مخصص فقط لزيوت من تصنيف: (${requiredFamiliesLabel})\n\nالزيت المختار: "${o.perfume_name}" هو من تصنيف (${oilFamilyLabel})، وهو غير مسموح به في هذا العرض.\nالتركيبة يجب أن تكون من تصنيف: (${requiredFamiliesLabel}) فقط.`);
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -2825,6 +2866,39 @@ option.low-stock {
 
         const selectedIndices = checkedBoxes.map(cb => parseInt(cb.getAttribute('data-cart-index'))).sort((a, b) => b - a);
 
+        // التحقق من توافق تصنيف الزيوت بين التركيبات المحددة في السلة وشروط العرض
+        const FAMILIES_AR = { 'oriental': 'شرقي', 'french': 'فرنسي', 'niche': 'نيش', 'niche_liter': 'الترا نيش', 'unilateral': 'احادي' };
+        const offerRecipeRequirements = (offer.items || []).filter(it => it.item_type === 'recipe');
+
+        const cartRecipesBeingBundled = [];
+        selectedIndices.slice().reverse().forEach(idx => {
+            const it = cart[idx];
+            if (it.type === 'custom_recipe' || it.type === 'recipe') {
+                cartRecipesBeingBundled.push(it);
+            }
+        });
+
+        for (let rIdx = 0; rIdx < cartRecipesBeingBundled.length; rIdx++) {
+            const cRec = cartRecipesBeingBundled[rIdx];
+            const req = offerRecipeRequirements[rIdx] || offerRecipeRequirements[0];
+            if (req && req.oil_category && req.oil_category !== 'any') {
+                const allowedFamilies = req.allowed_families ? req.allowed_families.split(',').map(f => f.trim()).filter(Boolean) : [req.oil_category];
+                const requiredFamiliesLabel = allowedFamilies.map(f => FAMILIES_AR[f] || f).join(' و ');
+
+                const oils = cRec.components || [];
+                for (const comp of oils) {
+                    const perfId = comp.product_id;
+                    const perfObj = (ALL_PRODUCTS_OFFLINE || []).find(p => p.id == perfId);
+                    const perfFamily = perfObj ? (perfObj.perfume_family || '') : '';
+                    if (!perfFamily || !allowedFamilies.includes(perfFamily)) {
+                        const oilFamilyLabel = FAMILIES_AR[perfFamily] || perfFamily || 'غير محدد';
+                        alert(`⚠️ لا يمكن تطبيق العرض على هذه التركيبة!\n\nالعرض مخصص لزيوت من تصنيف: (${requiredFamiliesLabel})\n\nالتركيبة "${cRec.name}" تحتوي على الزيت "${comp.name}" من تصنيف (${oilFamilyLabel}).\nالعرض يشترط أن تكون التركيبة من تصنيف (${requiredFamiliesLabel}) فقط.`);
+                        return;
+                    }
+                }
+            }
+        }
+
         // Build custom_data.items from the selected cart items
         const customItems = [];
         selectedIndices.slice().reverse().forEach(idx => {
@@ -2947,6 +3021,8 @@ option.low-stock {
                         recipe_name: it.recipe_name || 'تركيبة خاصة',
                         bottle_id: it.bottle_product_id ? parseInt(it.bottle_product_id) : 'no_bottle',
                         quantity: parseFloat(it.quantity) || 1,
+                        oil_category: it.oil_category || 'any',
+                        allowed_families: it.allowed_families || '',
                         oils: oils
                     });
                 }

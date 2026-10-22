@@ -111,6 +111,52 @@ $perfumes = all_products('perfume_gram');
                 </label>
             </div>
 
+            <!-- تصنيف الزيت العطري المطلوب في هذا العرض -->
+            <div style="background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px; align-items: start;">
+                    <label style="font-weight: 700;">تصنيف الزيت المسموح به في هذا العرض *
+                        <select id="builder-oil-category" onchange="toggleMixedCategorySelection()" style="font-weight: 600; margin-top: 5px;">
+                            <option value="any">🌐 شامل (أي تصنيف زيوت عطرية)</option>
+                            <option value="oriental">🏺 زيوت شرقية فقط (شرقي)</option>
+                            <option value="french">🌸 زيوت فرنسية فقط (فرنسي)</option>
+                            <option value="niche">💎 زيوت نيش فقط (نيش)</option>
+                            <option value="niche_liter">👑 زيوت الترا نيش فقط (الترا نيش)</option>
+                            <option value="mixed">🔀 تصنيف مختلط (اختار أكثر من صنف مع بعض)</option>
+                        </select>
+                        <small class="muted" style="display: block; margin-top: 4px;">في الكاشير: إذا حاول الموظف اختيار زيت غير مطابق لشروط هذا التصنيف سيتم تنبيهه ومنعه.</small>
+                    </label>
+
+                    <div id="builder-mixed-box" style="display: none; background: var(--surface-soft, rgba(201,168,76,0.06)); border: 1.5px dashed var(--gold, #c9a84c); border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 12px; font-weight: 700; color: var(--gold-dark, #b98418); margin-bottom: 6px;">
+                            حدد الأصناف المسموحة معاً في هذه التركيبة:
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; font-size: 13px; font-weight: 600;">
+                            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                                <input type="checkbox" name="mixed_category" value="oriental" checked> شرقي
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                                <input type="checkbox" name="mixed_category" value="french" checked> فرنسي
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                                <input type="checkbox" name="mixed_category" value="niche"> نيش
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                                <input type="checkbox" name="mixed_category" value="niche_liter"> الترا نيش
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; background: var(--surface); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--line);">
+                                <input type="checkbox" name="mixed_category" value="unilateral"> احادي
+                            </label>
+                        </div>
+                        <div style="margin-top: 8px; display: flex; gap: 6px; align-items: center;">
+                            <span style="font-size: 11px; color: var(--muted);">اختيارات سريعة:</span>
+                            <button type="button" class="btn small secondary" style="padding: 2px 8px; font-size: 11px;" onclick="setMixedPresets(['oriental', 'french'])">شرقي + فرنسي</button>
+                            <button type="button" class="btn small secondary" style="padding: 2px 8px; font-size: 11px;" onclick="setMixedPresets(['french', 'niche'])">فرنسي + نيش</button>
+                            <button type="button" class="btn small secondary" style="padding: 2px 8px; font-size: 11px;" onclick="setMixedPresets(['oriental', 'niche'])">شرقي + نيش</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- الزيوت العطرية داخل هذه التركيبة -->
             <div style="background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 12px;">
                 <div style="font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 8px;">مكونات الزيوت العطرية بالجرام:</div>
@@ -119,8 +165,8 @@ $perfumes = all_products('perfume_gram');
                         <select id="builder-oil-select">
                             <option value="">-- اختر زيتاً عطرياً --</option>
                             <?php foreach ($perfumes as $p): ?>
-                                <option value="<?= e($p['id']) ?>" data-name="<?= e($p['name']) ?>" data-price="<?= e($p['price_per_gram']) ?>" data-grade="<?= e($p['quality_grade']) ?>">
-                                    <?= e($p['name']) ?> (<?= e($p['quality_grade'] ?: '-') ?>) - <?= money($p['price_per_gram']) ?>/جم
+                                <option value="<?= e($p['id']) ?>" data-name="<?= e($p['name']) ?>" data-price="<?= e($p['price_per_gram']) ?>" data-grade="<?= e($p['quality_grade']) ?>" data-family="<?= e($p['perfume_family']) ?>">
+                                    <?= e($p['name']) ?> [<?= e(perfume_family_label($p['perfume_family'])) ?>] (<?= e($p['quality_grade'] ?: '-') ?>) - <?= money($p['price_per_gram']) ?>/جم
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -255,6 +301,29 @@ function addDirectProductToOffer() {
     renderOfferItemsTable();
 }
 
+const FAMILIES_AR = {
+    'oriental': 'شرقي',
+    'french': 'فرنسي',
+    'niche': 'نيش',
+    'niche_liter': 'الترا نيش',
+    'unilateral': 'احادي'
+};
+
+function toggleMixedCategorySelection() {
+    const cat = document.getElementById('builder-oil-category')?.value;
+    const mixedBox = document.getElementById('builder-mixed-box');
+    if (mixedBox) {
+        mixedBox.style.display = (cat === 'mixed') ? 'block' : 'none';
+    }
+}
+
+function setMixedPresets(list) {
+    const checkboxes = document.querySelectorAll('#builder-mixed-box input[name="mixed_category"]');
+    checkboxes.forEach(cb => {
+        cb.checked = list.includes(cb.value);
+    });
+}
+
 // إضافة زيت عطري للتركيبة قيد التجهيز
 function addOilToCurrentBuilder() {
     const sel = document.getElementById('builder-oil-select');
@@ -268,13 +337,15 @@ function addOilToCurrentBuilder() {
     const name = opt.getAttribute('data-name');
     const pricePerGram = parseFloat(opt.getAttribute('data-price')) || 0;
     const grade = opt.getAttribute('data-grade') || '';
+    const family = opt.getAttribute('data-family') || '';
 
     currentRecipeOils.push({
         perfume_id: perfumeId,
         name: name,
         grams: grams,
         price_per_gram: pricePerGram,
-        grade: grade
+        grade: grade,
+        family: family
     });
 
     sel.value = '';
@@ -291,10 +362,11 @@ function renderCurrentRecipeOilsList() {
     const container = document.getElementById('builder-oils-list');
     container.innerHTML = '';
     currentRecipeOils.forEach((oil, idx) => {
+        const famText = FAMILIES_AR[oil.family] ? ` [${FAMILIES_AR[oil.family]}]` : '';
         const tag = document.createElement('div');
         tag.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: var(--surface-soft, rgba(0,0,0,0.06)); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; font-weight: 600;';
         tag.innerHTML = `
-            <span>🧪 ${oil.name} (${oil.grams}جم)</span>
+            <span>🧪 ${oil.name}${famText} (${oil.grams}جم)</span>
             <button type="button" onclick="removeCurrentRecipeOil(${idx})" style="background:none; border:none; color:var(--danger); cursor:pointer; padding:0 2px; font-weight:bold;">×</button>
         `;
         container.appendChild(tag);
@@ -319,6 +391,22 @@ function addCustomRecipeToOffer() {
         return alert('الرجاء إضافة مكونات زيتية أو اختيار زجاجة للتركيبة.');
     }
 
+    const catSel = document.getElementById('builder-oil-category');
+    const oilCategory = catSel ? catSel.value : 'any';
+    let allowedFamilies = [];
+
+    if (oilCategory === 'mixed') {
+        const checked = document.querySelectorAll('#builder-mixed-box input[name="mixed_category"]:checked');
+        checked.forEach(cb => allowedFamilies.push(cb.value));
+        if (allowedFamilies.length === 0) {
+            return alert('الرجاء اختيار تصنيف واحد على الأقل للمختلط (مثلاً شرقي وفرنسي).');
+        }
+    } else if (oilCategory === 'any') {
+        allowedFamilies = ['oriental', 'french', 'niche', 'niche_liter', 'unilateral'];
+    } else {
+        allowedFamilies = [oilCategory];
+    }
+
     let oilsPrice = currentRecipeOils.reduce((sum, o) => sum + (o.grams * o.price_per_gram), 0);
     let singleRecipePrice = bottlePrice + oilsPrice;
 
@@ -329,6 +417,8 @@ function addCustomRecipeToOffer() {
         quantity: qty,
         unit_price: singleRecipePrice,
         total_price: singleRecipePrice * qty,
+        oil_category: oilCategory,
+        allowed_families: allowedFamilies.join(','),
         oils: [...currentRecipeOils]
     });
 
@@ -336,6 +426,10 @@ function addCustomRecipeToOffer() {
     document.getElementById('builder-recipe-name').value = 'تركيبة عطرية خاصة';
     bottleSel.value = '';
     document.getElementById('builder-recipe-qty').value = '1';
+    if (catSel) {
+        catSel.value = 'any';
+        toggleMixedCategorySelection();
+    }
     currentRecipeOils = [];
     renderCurrentRecipeOilsList();
 
@@ -402,13 +496,27 @@ function renderOfferItemsTable() {
     offerRecipeItems.forEach((rec, rIdx) => {
         grandOriginalTotal += rec.total_price;
         const oilsSummary = rec.oils.map(o => `${o.name} (${o.grams}جم)`).join(', ');
+
+        let catBadge = '';
+        if (rec.oil_category === 'mixed' && rec.allowed_families) {
+            const listNames = rec.allowed_families.split(',').map(f => FAMILIES_AR[f] || f).join(' + ');
+            catBadge = `<span class="badge" style="background: rgba(168,85,247,0.12); color: #7e22ce; font-weight: 700; font-size: 11px;">🔀 مختلط: ${listNames}</span>`;
+        } else if (rec.oil_category && rec.oil_category !== 'any') {
+            catBadge = `<span class="badge" style="background: rgba(59,130,246,0.12); color: #1d4ed8; font-weight: 700; font-size: 11px;">🏷️ ${FAMILIES_AR[rec.oil_category] || rec.oil_category} فقط</span>`;
+        } else {
+            catBadge = `<span class="badge" style="background: rgba(16,185,129,0.12); color: #047857; font-weight: 700; font-size: 11px;">🌐 شامل أي تصنيف</span>`;
+        }
+
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--line)';
         tr.innerHTML = `
             <td style="padding: 8px 10px;"><span class="badge custom">🧪 تركيبة</span></td>
             <td style="padding: 8px 10px;">
-                <div style="font-weight: 600;">${rec.name} (${rec.bottle_name})</div>
-                ${oilsSummary ? `<div style="font-size: 11px; color: var(--muted);">${oilsSummary}</div>` : ''}
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-weight: 600;">${rec.name} (${rec.bottle_name})</span>
+                    ${catBadge}
+                </div>
+                ${oilsSummary ? `<div style="font-size: 11px; color: var(--muted); margin-top: 3px;">${oilsSummary}</div>` : ''}
             </td>
             <td style="padding: 8px 10px; text-align: center;"><strong>${rec.quantity}</strong></td>
             <td style="padding: 8px 10px; text-align: center;">${rec.total_price.toFixed(2)} ج.م</td>
@@ -422,6 +530,8 @@ function renderOfferItemsTable() {
             <input type="hidden" name="recipes[${rIdx}][name]" value="${rec.name.replace(/"/g, '&quot;')}">
             <input type="hidden" name="recipes[${rIdx}][bottle_id]" value="${rec.bottle_id || ''}">
             <input type="hidden" name="recipes[${rIdx}][quantity]" value="${rec.quantity}">
+            <input type="hidden" name="recipes[${rIdx}][oil_category]" value="${rec.oil_category || 'any'}">
+            <input type="hidden" name="recipes[${rIdx}][allowed_families]" value="${rec.allowed_families || ''}">
         `;
         rec.oils.forEach((oil, oIdx) => {
             hiddenContainer.innerHTML += `

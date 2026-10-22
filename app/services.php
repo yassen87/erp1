@@ -7598,7 +7598,7 @@ function find_offer_with_items(int $id): ?array
     foreach ($items as &$item) {
         if ($item['item_type'] === 'recipe') {
             $stmtComp = $db->prepare("
-                SELECT c.*, p.name AS perfume_name, p.sale_price, ppd.quality_grade, ppd.price_per_gram
+                SELECT c.*, p.name AS perfume_name, p.sale_price, ppd.quality_grade, ppd.price_per_gram, ppd.perfume_family
                 FROM offer_item_components c
                 JOIN products p ON p.id = c.perfume_product_id
                 LEFT JOIN product_perfume_details ppd ON ppd.product_id = p.id
@@ -7711,8 +7711,8 @@ function create_offer(array $data, ?int $userId = null): int
         // Process Recipe / Mix items
         if (!empty($data['recipes']) && is_array($data['recipes'])) {
             $stmtRecipeItem = $db->prepare("
-                INSERT INTO offer_items (offer_id, item_type, bottle_product_id, recipe_name, quantity)
-                VALUES (?, 'recipe', ?, ?, ?)
+                INSERT INTO offer_items (offer_id, item_type, bottle_product_id, recipe_name, quantity, oil_category, allowed_families)
+                VALUES (?, 'recipe', ?, ?, ?, ?, ?)
             ");
             $stmtComp = $db->prepare("
                 INSERT INTO offer_item_components (offer_item_id, perfume_product_id, grams)
@@ -7723,8 +7723,10 @@ function create_offer(array $data, ?int $userId = null): int
                 $recipeName = trim((string)($rec['name'] ?? 'تركيبة خاصة'));
                 $bottleId = !empty($rec['bottle_id']) ? (int)$rec['bottle_id'] : null;
                 $qty = max(1.0, (float)($rec['quantity'] ?? 1));
+                $oilCategory = trim((string)($rec['oil_category'] ?? 'any'));
+                $allowedFamilies = !empty($rec['allowed_families']) ? trim((string)$rec['allowed_families']) : null;
 
-                $stmtRecipeItem->execute([$offerId, $bottleId, $recipeName, $qty]);
+                $stmtRecipeItem->execute([$offerId, $bottleId, $recipeName, $qty, $oilCategory, $allowedFamilies]);
                 $offerItemId = (int)$db->lastInsertId();
 
                 if (!empty($rec['oils']) && is_array($rec['oils'])) {
@@ -7814,8 +7816,8 @@ function update_offer(int $id, array $data, ?int $userId = null): void
         // Process Recipe / Mix items
         if (!empty($data['recipes']) && is_array($data['recipes'])) {
             $stmtRecipeItem = $db->prepare("
-                INSERT INTO offer_items (offer_id, item_type, bottle_product_id, recipe_name, quantity)
-                VALUES (?, 'recipe', ?, ?, ?)
+                INSERT INTO offer_items (offer_id, item_type, bottle_product_id, recipe_name, quantity, oil_category, allowed_families)
+                VALUES (?, 'recipe', ?, ?, ?, ?, ?)
             ");
             $stmtComp = $db->prepare("
                 INSERT INTO offer_item_components (offer_item_id, perfume_product_id, grams)
@@ -7826,8 +7828,10 @@ function update_offer(int $id, array $data, ?int $userId = null): void
                 $recipeName = trim((string)($rec['name'] ?? 'تركيبة خاصة'));
                 $bottleId = !empty($rec['bottle_id']) ? (int)$rec['bottle_id'] : null;
                 $qty = max(1.0, (float)($rec['quantity'] ?? 1));
+                $oilCategory = trim((string)($rec['oil_category'] ?? 'any'));
+                $allowedFamilies = !empty($rec['allowed_families']) ? trim((string)$rec['allowed_families']) : null;
 
-                $stmtRecipeItem->execute([$id, $bottleId, $recipeName, $qty]);
+                $stmtRecipeItem->execute([$id, $bottleId, $recipeName, $qty, $oilCategory, $allowedFamilies]);
                 $offerItemId = (int)$db->lastInsertId();
 
                 if (!empty($rec['oils']) && is_array($rec['oils'])) {

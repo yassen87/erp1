@@ -89,6 +89,8 @@ function ensure_schema_updates(): void
         "ALTER TABLE invoice_lines ADD COLUMN is_gift TINYINT(1) NOT NULL DEFAULT 0",
         "CREATE TABLE IF NOT EXISTS customer_followups (id INT AUTO_INCREMENT PRIMARY KEY, customer_id INT NOT NULL, status ENUM('pending', 'contacted') NOT NULL DEFAULT 'pending', notes TEXT NULL, contacted_by INT NULL, contacted_at DATETIME NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, UNIQUE KEY uq_customer_followup (customer_id), INDEX idx_cust_followup_status (status), CONSTRAINT fk_cust_followup_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE, CONSTRAINT fk_cust_followup_user FOREIGN KEY (contacted_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS customer_followup_logs (id INT AUTO_INCREMENT PRIMARY KEY, customer_id INT NOT NULL, action ENUM('contacted', 'pending', 'reset') NOT NULL, notes TEXT NULL, user_id INT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_cust_followup_log (customer_id, created_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "ALTER TABLE offer_items ADD COLUMN oil_category VARCHAR(40) NULL DEFAULT 'any'",
+        "ALTER TABLE offer_items ADD COLUMN allowed_families VARCHAR(255) NULL",
     ];
     // Migration: branch_targets from target_month to target_date
     try {
