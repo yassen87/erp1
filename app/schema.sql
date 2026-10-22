@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   role_id INT NOT NULL,
   location_id INT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
+  phone VARCHAR(30) NULL,
   basic_salary DECIMAL(12,2) NOT NULL DEFAULT 0.00,
   commission_percent DECIMAL(5,2) NOT NULL DEFAULT 0.00,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

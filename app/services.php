@@ -1274,7 +1274,12 @@ function add_user(array $data): void
     if (!$col) {
         $db->exec('ALTER TABLE users ADD COLUMN working_days INT NOT NULL DEFAULT 0');
     }
-    $stmt = $db->prepare('INSERT INTO users (name, username, password_hash, role_id, location_id, basic_salary, commission_percent, working_days, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    $colPhone = $db->query("SHOW COLUMNS FROM users LIKE 'phone'")->fetch();
+    if (!$colPhone) {
+        $db->exec('ALTER TABLE users ADD COLUMN phone VARCHAR(30) NULL');
+    }
+    $phone = !empty($data['phone']) ? trim((string)$data['phone']) : null;
+    $stmt = $db->prepare('INSERT INTO users (name, username, password_hash, role_id, location_id, basic_salary, commission_percent, working_days, is_active, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $data['name'],
         $data['username'],
@@ -1284,7 +1289,8 @@ function add_user(array $data): void
         (float) ($data['basic_salary'] ?? 0),
         (float) ($data['commission_percent'] ?? 0),
         (int) ($data['working_days'] ?? 0),
-        isset($data['is_active']) ? (int) $data['is_active'] : 1
+        isset($data['is_active']) ? (int) $data['is_active'] : 1,
+        $phone
     ]);
 }
 
@@ -1303,6 +1309,10 @@ function update_user(array $data): void
     if (!$col) {
         $db->exec('ALTER TABLE users ADD COLUMN working_days INT NOT NULL DEFAULT 0');
     }
+    $colPhone = $db->query("SHOW COLUMNS FROM users LIKE 'phone'")->fetch();
+    if (!$colPhone) {
+        $db->exec('ALTER TABLE users ADD COLUMN phone VARCHAR(30) NULL');
+    }
     $db->beginTransaction();
     try {
         $id = (int) $data['id'];
@@ -1313,8 +1323,9 @@ function update_user(array $data): void
         if (!empty($data['password'])) {
             $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
         }
+        $phone = !empty($data['phone']) ? trim((string)$data['phone']) : null;
 
-        $stmt = $db->prepare('UPDATE users SET name = ?, username = ?, password_hash = ?, role_id = ?, location_id = ?, basic_salary = ?, commission_percent = ?, working_days = ?, is_active = ? WHERE id = ?');
+        $stmt = $db->prepare('UPDATE users SET name = ?, username = ?, password_hash = ?, role_id = ?, location_id = ?, basic_salary = ?, commission_percent = ?, working_days = ?, is_active = ?, phone = ? WHERE id = ?');
         $stmt->execute([
             $data['name'],
             $data['username'],
@@ -1325,6 +1336,7 @@ function update_user(array $data): void
             (float) ($data['commission_percent'] ?? 0),
             (int) ($data['working_days'] ?? 0),
             isset($data['is_active']) ? (int) $data['is_active'] : 1,
+            $phone,
             $id
         ]);
         $db->commit();
@@ -6815,7 +6827,7 @@ function financial_ledger_summary(array $filters = []): array
 /**
  * إرسال رسالة نصية عبر خدمة الواتساب (مرفق معها لوجو البراند تلقائياً)
  */
-function send_whatsapp_message(string $phone, string $message, bool $attachLogo = true): bool
+function send_whatsapp_message(string $phone, string $message, bool $attachLogo = true, int $timeout = 8): bool
 {
     $phone = preg_replace('/\D/', '', $phone);
     if (empty($phone)) {
@@ -6834,6 +6846,7 @@ function send_whatsapp_message(string $phone, string $message, bool $attachLogo 
     $endpoints[] = 'https://erp.transyshub.tech/api/send-message';
     $endpoints[] = 'http://127.0.0.1:3002/api/send-message';
     $endpoints[] = 'http://localhost:3002/api/send-message';
+    $endpoints = array_values(array_unique($endpoints));
 
     $payloadData = [
         'phone' => $phone,
@@ -6874,8 +6887,8 @@ function send_whatsapp_message(string $phone, string $message, bool $attachLogo 
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json; charset=utf-8']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, min(4, $timeout));
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
@@ -6892,6 +6905,74 @@ function send_whatsapp_message(string $phone, string $message, bool $attachLogo 
         }
     }
     return false;
+}
+
+/**
+ * إرسال رسالة تنبيه أمان فورية لهاتف الأدمن عند تسجيل الدخول للنظام
+ */
+function notify_admin_login(array $user): bool
+{
+    try {
+        if (setting_value('admin_login_alert_enabled', '1') === '0') {
+            return false;
+        }
+
+        $targetPhones = [];
+        $configuredPhone = trim((string)setting_value('admin_login_alert_phone', ''));
+        if (!empty($configuredPhone)) {
+            $targetPhones[] = $configuredPhone;
+        }
+        if (!empty($user['phone'])) {
+            $userPhone = trim((string)$user['phone']);
+            if (!in_array($userPhone, $targetPhones, true)) {
+                $targetPhones[] = $userPhone;
+            }
+        }
+
+        if (empty($targetPhones)) {
+            return false;
+        }
+
+        $shopName = setting_value('shop_name', 'حمزة للعطور');
+        $dateTime = date('Y-m-d h:i A');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+        // Detect device / client
+        $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+        $device = 'متصفح ويب';
+        if (stripos($ua, 'Mobile') !== false || stripos($ua, 'Android') !== false || stripos($ua, 'iPhone') !== false) {
+            $device = '📱 هاتف ذكي (Mobile)';
+        } elseif (stripos($ua, 'Windows') !== false) {
+            $device = '💻 كمبيوتر (Windows)';
+        } elseif (stripos($ua, 'Macintosh') !== false) {
+            $device = '💻 جهاز ماك (Mac)';
+        }
+
+        $name = !empty($user['name']) ? $user['name'] : $user['username'];
+        $username = $user['username'];
+
+        $msg = "🔔 *تنبيه أمان: تسجيل دخول لوحة تحكم الأدمن*\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "🏪 *الموقع / النظام:* {$shopName}\n";
+        $msg .= "👤 *حساب الأدمن:* {$name} (@{$username})\n";
+        $msg .= "⏰ *توقيت الدخول:* {$dateTime}\n";
+        $msg .= "🌐 *عنوان IP:* {$ip}\n";
+        $msg .= "💻 *الجهاز:* {$device}\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "🔐 تم تسجيل هذا الإشعار تلقائياً لتأمين حسابك.\n";
+        $msg .= "إذا لم تكن أنت من قام بالدخول، يرجى الدخول فوراً لتأمين الحساب وتغيير كلمة المرور! ⚠️";
+
+        $anySent = false;
+        foreach ($targetPhones as $phone) {
+            if (send_whatsapp_message($phone, $msg, true, 4)) {
+                $anySent = true;
+            }
+        }
+        return $anySent;
+    } catch (Throwable $e) {
+        error_log('notify_admin_login error: ' . $e->getMessage());
+        return false;
+    }
 }
 
 /**

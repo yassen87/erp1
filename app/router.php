@@ -349,6 +349,46 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
+    if ($route === 'test_admin_alert_whatsapp') {
+        $user = require_login();
+        if (($user['role_code'] ?? '') !== 'admin') {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'غير مصرح لغير المسؤولين (Admin)']);
+            exit;
+        }
+
+        $phone = trim((string)($_GET['phone'] ?? post_string('phone', setting_value('admin_login_alert_phone', ''))));
+        if (empty($phone)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'الرجاء إدخال رقم الهاتف أولاً']);
+            exit;
+        }
+
+        $shopName = setting_value('shop_name', 'حمزة للعطور');
+        $dateTime = date('Y-m-d h:i A');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+        $msg = "🔔 *رسالة تجريبية: اختبار تنبيهات دخول الأدمن*\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "✅ تم تفعيل خدمة التنبيهات الأمنية بنجاح على هذا الرقم!\n";
+        $msg .= "🏪 *الموقع / النظام:* {$shopName}\n";
+        $msg .= "👤 *حساب الأدمن:* {$user['name']} (@{$user['username']})\n";
+        $msg .= "⏰ *توقيت الإرسال:* {$dateTime}\n";
+        $msg .= "🌐 *عنوان IP:* {$ip}\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "ستصلك رسالة مماثلة فوراً على هذا الرقم في كل مرة يتم فيها تسجيل الدخول بحساب الأدمن لتأمين النظام. 🔒";
+
+        $sent = send_whatsapp_message($phone, $msg, true, 8);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($sent) {
+            echo json_encode(['success' => true, 'message' => '✅ تم إرسال رسالة التنبيه التجريبية بنجاح إلى هاتفك عبر الواتساب!']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'تعذر الإرسال. تأكد من أن خدمة الواتساب متصلة والرقم صحيح ومسجل عليه حساب واتساب.']);
+        }
+        exit;
+    }
+
     if ($route === 'send_invoice_whatsapp') {
         require_login();
         $invoiceId = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
@@ -364,6 +404,52 @@ function handle_ajax_requests(string $route): void
         $result = process_daily_birthday_whatsapp($force);
         header('Content-Type: application/json');
         echo json_encode(array_merge(['success' => true], $result));
+        exit;
+    }
+
+    if ($route === 'test_admin_alert_whatsapp') {
+        $currentUser = require_login();
+        if (($currentUser['role_code'] ?? '') !== 'admin') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'هذا الإجراء متاح فقط للأدمن.']);
+            exit;
+        }
+        $targetPhone = trim((string)($_GET['phone'] ?? $_POST['phone'] ?? ''));
+        if (empty($targetPhone)) {
+            $targetPhone = trim((string)setting_value('admin_login_alert_phone', ''));
+        }
+        if (empty($targetPhone) && !empty($currentUser['phone'])) {
+            $targetPhone = trim((string)$currentUser['phone']);
+        }
+        if (empty($targetPhone)) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'يرجى كتابة رقم هاتفك في الخانة المخصصة للتجربة أو حفظه في الإعدادات.']);
+            exit;
+        }
+
+        $shopName = setting_value('shop_name', 'حمزة للعطور');
+        $dateTime = date('Y-m-d h:i A');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $name = !empty($currentUser['name']) ? $currentUser['name'] : $currentUser['username'];
+        $username = $currentUser['username'];
+
+        $msg = "🧪 *رسالة اختبار: تنبيه أمان تسجيل دخول الأدمن*\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "🏪 *الموقع / النظام:* {$shopName}\n";
+        $msg .= "👤 *حساب الأدمن:* {$name} (@{$username})\n";
+        $msg .= "⏰ *توقيت الإرسال التجريبي:* {$dateTime}\n";
+        $msg .= "🌐 *عنوان IP:* {$ip}\n";
+        $msg .= "📱 *الرقم المستلم:* {$targetPhone}\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "✅ تم إرسال هذه الرسالة بنجاح للتأكد من تفعيل تنبيهات دخول الأدمن على هاتفك!";
+
+        $ok = send_whatsapp_message($targetPhone, $msg, true, 8);
+        header('Content-Type: application/json; charset=utf-8');
+        if ($ok) {
+            echo json_encode(['success' => true, 'phone' => $targetPhone, 'message' => 'تم إرسال رسالة الاختبار بنجاح إلى هاتفك!']);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'تعذر إرسال الرسالة عبر خدمة الواتساب. تأكد من تشغيل خدمة الواتساب وصحة الرقم بالصيغة الدولية (مثال: 01012345678 أو 201012345678).']);
+        }
         exit;
     }
 

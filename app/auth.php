@@ -184,6 +184,11 @@ function login_user(string $username, string $password): bool
     $_SESSION['user_id'] = (int) $user['id'];
     unset($_SESSION['permissions']);
     log_audit((int) $user['id'], 'login', 'user', (int) $user['id'], 'تسجيل دخول المستخدم: ' . $user['username']);
+
+    // إرسال تنبيه أمان فوري لهاتف الأدمن عند تسجيل الدخول
+    if (($user['role_code'] ?? '') === 'admin' && function_exists('notify_admin_login')) {
+        notify_admin_login($user);
+    }
     return true;
 }
 

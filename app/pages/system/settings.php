@@ -125,6 +125,58 @@ $generalLabels = [
         </div>
     </div>
 
+    <!-- كارت تنبيه أمان تسجيل دخول الأدمن على الهاتف -->
+    <div class="panel" style="border: 2px solid rgba(59, 130, 246, 0.45); border-radius: 14px; position: relative; background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 70%);">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 28px;">🛡️</span>
+                <div>
+                    <h3 style="margin: 0; color: #60a5fa; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                        <span>تنبيه أمان: إشعار تسجيل دخول الأدمن على الهاتف (WhatsApp)</span>
+                        <span style="font-size: 11px; padding: 2px 8px; border-radius: 999px; background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4);">أمان فوري 🔐</span>
+                    </h3>
+                    <p class="muted" style="margin: 3px 0 0 0; font-size: 13px;">عند قيام الأدمن بتسجيل الدخول على الموقع، يرسل النظام تلقائياً رسالة واتساب فورية إلى هاتفك تحتوي على (اسم الحساب، التاريخ والوقت، عنوان IP، ونوع الجهاز المستخدم).</p>
+                </div>
+            </div>
+            <a href="index.php?r=users" class="btn small" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #60a5fa;">
+                إدارة أرقام الموظفين والأدمن 👥
+            </a>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 18px;">
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 6px;">
+                    حالة تنبيه تسجيل دخول الأدمن:
+                </label>
+                <select name="settings[admin_login_alert_enabled]" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-card, #1f2937); color: #fff; border: 1px solid rgba(255,255,255,0.15);">
+                    <option value="1" <?= ($settings['admin_login_alert_enabled'] ?? '1') === '1' ? 'selected' : '' ?>>✅ مفعل (إرسال إشعار واتساب فوري عند كل دخول)</option>
+                    <option value="0" <?= ($settings['admin_login_alert_enabled'] ?? '1') === '0' ? 'selected' : '' ?>>❌ معطل</option>
+                </select>
+                <span class="muted" style="font-size: 12px; display: block; margin-top: 4px;">يضمن لك معرفة أي محاولة دخول بحساب الأدمن فور حدوثها لتأمين الحساب ضد أي اختراق.</span>
+            </div>
+
+            <div>
+                <label style="font-weight: bold; display: block; margin-bottom: 6px;">
+                    رقم هاتف الأدمن المعتمد لاستلام رسائل التنبيه:
+                </label>
+                <input id="admin_login_alert_phone_input" name="settings[admin_login_alert_phone]" value="<?= e($settings['admin_login_alert_phone'] ?? '') ?>" placeholder="مثال: 01012345678 أو 201012345678" style="width: 100%; padding: 10px; border-radius: 8px; background: var(--bg-card, #1f2937); color: #fff; border: 1px solid rgba(255,255,255,0.15); direction: ltr; text-align: left; font-family: monospace; font-size: 14px;">
+                <span class="muted" style="font-size: 12px; display: block; margin-top: 4px;">اكتب رقم تليفونك (الواتساب) هنا. (كما يمكنك أيضاً ضبط رقم الهاتف في ملفك بصفحة الموظفين).</span>
+            </div>
+        </div>
+
+        <!-- زر تجربة الإرسال الحي للهاتف -->
+        <div style="background: rgba(0,0,0,0.22); padding: 14px 18px; border-radius: 10px; border: 1px dashed rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+            <div>
+                <strong style="color: #93c5fd; font-size: 14px; display: block;">📲 فحص وتجربة الإشعار الحي على هاتفك:</strong>
+                <span class="muted" style="font-size: 12px; display: block; margin-top: 2px;">اضغط لتجربة إرسال رسالة أمان تجريبية على رقم هاتفك المكتوب بالأعلى للتأكد من وصولها.</span>
+            </div>
+            <button type="button" class="btn small" onclick="testAdminLoginAlert()" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #60a5fa; font-weight: bold; padding: 8px 16px;">
+                🚀 تجربة إرسال رسالة لتليفوني الآن
+            </button>
+        </div>
+        <div id="admin-alert-test-result" style="margin-top: 12px; font-weight: bold; font-size: 14px;"></div>
+    </div>
+
     <!-- كارت الإعدادات العامة -->
     <div class="panel">
         <h3 style="margin-top: 0; margin-bottom: 16px;">⚙️ الإعدادات العامة</h3>
@@ -176,6 +228,33 @@ function testBirthdayGreetings() {
         })
         .catch(err => {
             resDiv.innerHTML = '<span style="color:#ef4444;">❌ فشل الاتصال: ' + err.message + '</span>';
+        });
+}
+
+function testAdminLoginAlert() {
+    const phoneInput = document.getElementById('admin_login_alert_phone_input');
+    const phoneVal = phoneInput ? phoneInput.value.trim() : '';
+    const resDiv = document.getElementById('admin-alert-test-result');
+    
+    if (!phoneVal) {
+        alert('يرجى كتابة رقم هاتفك في الخانة المخصصة أولاً لتجربة الإرسال عليه!');
+        if (phoneInput) phoneInput.focus();
+        return;
+    }
+
+    resDiv.innerHTML = '<span style="color:#eab308;">جاري إرسال رسالة الاختبار إلى هاتفك عبر الواتساب... ⏳</span>';
+
+    fetch('index.php?r=test_admin_alert_whatsapp&phone=' + encodeURIComponent(phoneVal))
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                resDiv.innerHTML = `<span style="color:#25D366;">✅ ${data.message} (تم الإرسال إلى: ${data.phone}) - تفقد تطبيق الواتساب على هاتفك الآن! 📱</span>`;
+            } else {
+                resDiv.innerHTML = `<span style="color:#ef4444;">❌ خطأ: ${data.error || 'تعذر الإرسال'}</span>`;
+            }
+        })
+        .catch(err => {
+            resDiv.innerHTML = `<span style="color:#ef4444;">❌ فشل الاتصال: ${err.message}</span>`;
         });
 }
 </script>

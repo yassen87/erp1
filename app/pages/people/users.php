@@ -229,6 +229,7 @@ $editUser = $editId > 0 ? find_user($editId) : null;
         <label><?= e(__('الاسم')) ?><input name="name" required value="<?= e($editUser['name'] ?? '') ?>" style="padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font-family:inherit;"></label>
         <label><?= e(__('اسم المستخدم')) ?><input name="username" required value="<?= e($editUser['username'] ?? '') ?>" style="padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font-family:inherit;"></label>
         <label><?= e(__('كلمة المرور')) ?><input name="password" type="password" <?= $editUser ? '' : 'required' ?> placeholder="<?= $editUser ? __('اتركها فارغة للبقاء كما هي') : '' ?>" style="padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font-family:inherit;"></label>
+        <label><?= e(__('رقم الهاتف / الواتساب')) ?><input name="phone" type="text" placeholder="مثال: 01012345678 أو 201012345678" value="<?= e($editUser['phone'] ?? '') ?>" style="padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font-family:inherit;"></label>
         <label><?= e(__('الدور')) ?>
             <select name="role_id" style="padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font-family:inherit; outline:none;">
                 <?php foreach ($roles as $r): ?>
@@ -267,6 +268,7 @@ $editUser = $editId > 0 ? find_user($editId) : null;
                 <tr style="border-bottom: 2px solid var(--line); color: var(--muted); font-weight:700;">
                     <th style="padding:12px 10px; font-size:13px;"><?= e(__('الاسم')) ?></th>
                     <th style="padding:12px 10px; font-size:13px;"><?= e(__('المستخدم')) ?></th>
+                    <th style="padding:12px 10px; font-size:13px;"><?= e(__('الهاتف / واتساب')) ?></th>
                     <th style="padding:12px 10px; font-size:13px;"><?= e(__('الدور')) ?></th>
                     <th style="padding:12px 10px; font-size:13px;"><?= e(__('الموقع')) ?></th>
                     <th style="padding:12px 10px; text-align: center; font-size:13px;"><?= e(__('الراتب الأساسي')) ?></th>
@@ -280,6 +282,13 @@ $editUser = $editId > 0 ? find_user($editId) : null;
                     <tr style="border-bottom: 1px solid var(--line); transition: background 0.15s ease;" onmouseover="this.style.background='var(--surface-soft)'" onmouseout="this.style.background='transparent'">
                         <td style="padding:12px 10px;"><strong><?= e($u['name']) ?></strong></td>
                         <td style="padding:12px 10px;"><?= e($u['username']) ?></td>
+                        <td style="padding:12px 10px; font-family:monospace; direction:ltr; text-align:right;">
+                            <?php if (!empty($u['phone'])): ?>
+                                <span style="display:inline-flex; align-items:center; gap:4px; font-weight:600; color:var(--primary);">📱 <?= e($u['phone']) ?></span>
+                            <?php else: ?>
+                                <span style="color:var(--muted); font-size:12px;">—</span>
+                            <?php endif; ?>
+                        </td>
                         <td style="padding:12px 10px;"><?= e($u['role_name']) ?></td>
                         <td style="padding:12px 10px;"><?= e($u['location_name'] ?: __('عام')) ?></td>
                         <td style="padding:12px 10px; text-align: center;"><strong><?= money($u['basic_salary']) ?></strong></td>
