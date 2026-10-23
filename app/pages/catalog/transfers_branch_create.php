@@ -200,10 +200,6 @@ unset($rec);
             <!-- تبويب 2: عمل تركيبة مخصصة (بزجاجة أو بدون زجاجة) -->
             <div id="tab-content-mix" style="display: none;">
                 <div style="background: rgba(59,130,246,0.06); padding: 12px 14px; border-radius: 10px; border: 1.5px dashed rgba(59,130,246,0.4); margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <strong style="color: #60a5fa; font-size: 14px;">🧪 تجهيز خلطة عطرية للنقل:</strong>
-                        <span class="muted" style="font-size: 11px;">تُخصم كل الزيوت والزجاجة فورياً من رصيد الفرع</span>
-                    </div>
                     <div>
                         <label style="font-weight: bold; display: block; margin-bottom: 4px; font-size: 12px;">اسم أو وصف التركيبة (اختياري):</label>
                         <input type="text" id="mix-title-input" placeholder="مثال: خلطة مسك الختام + يارا خاص" style="width: 100%; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--line); font-family: inherit;">
