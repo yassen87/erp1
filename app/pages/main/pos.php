@@ -1,6 +1,6 @@
 <?php
 $locations = sale_locations();
-$userLocationId = current_user_location_id();
+$userLocationId = current_user_location_id() ?? (defined('BRANCH_LOCATION_ID') && (int)BRANCH_LOCATION_ID > 0 ? (int)BRANCH_LOCATION_ID : null);
 if ($userLocationId !== null) {
     $locations = array_values(array_filter($locations, fn ($l) => (int) $l['id'] === $userLocationId));
 }
