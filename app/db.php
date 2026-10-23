@@ -92,6 +92,7 @@ function ensure_schema_updates(): void
         "ALTER TABLE offer_items ADD COLUMN oil_category VARCHAR(40) NULL DEFAULT 'any'",
         "ALTER TABLE offer_items ADD COLUMN allowed_families VARCHAR(255) NULL",
         "ALTER TABLE users ADD COLUMN phone VARCHAR(30) NULL",
+        "UPDATE locations SET type = 'branch', is_active = 1 WHERE id = 2 OR name LIKE '%خنان%'",
     ];
     // Migration: branch_targets from target_month to target_date
     try {
