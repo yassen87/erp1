@@ -869,8 +869,9 @@ function transfer_line_items(array $data): array
     foreach (($data['product_id'] ?? []) as $idx => $productId) {
         $productId = (int) $productId;
         $quantity = (float) ($data['quantity'][$idx] ?? 0);
+        $notes = trim((string)($data['item_notes'][$idx] ?? ''));
         if ($productId > 0 && $quantity > 0) {
-            $items[] = ['product_id' => $productId, 'quantity' => $quantity];
+            $items[] = ['product_id' => $productId, 'quantity' => $quantity, 'notes' => $notes ?: null];
         }
     }
     return $items;
@@ -2849,8 +2850,14 @@ function create_transfer(array $data, int $userId): void
         $transferId = (int) $db->lastInsertId();
         foreach ($lineItems as $item) {
             move_inventory($db, $from, $item['product_id'], -1 * $item['quantity'], 'transfer_future', $userId, 'transfer', $transferId, 'خروج تحويل مخزون');
-            $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity) VALUES (?, ?, ?)');
-            $stmt->execute([$transferId, $item['product_id'], $item['quantity']]);
+            $notes = !empty($item['notes']) ? (string)$item['notes'] : null;
+            try {
+                $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity, notes) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$transferId, $item['product_id'], $item['quantity'], $notes]);
+            } catch (Throwable $e) {
+                $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity) VALUES (?, ?, ?)');
+                $stmt->execute([$transferId, $item['product_id'], $item['quantity']]);
+            }
         }
         log_audit($userId, 'create', 'transfer', $transferId, 'إنشاء أمر تحويل مخزني رقم ' . $number);
         $db->commit();
@@ -2903,8 +2910,14 @@ function update_transfer(array $data, int $userId, ?array $fromTypes = null, ?ar
 
         foreach ($lineItems as $item) {
             move_inventory($db, $from, $item['product_id'], -1 * $item['quantity'], 'transfer_future', $userId, 'transfer', $transferId, 'خروج تحويل مخزون معدّل');
-            $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity) VALUES (?, ?, ?)');
-            $stmt->execute([$transferId, $item['product_id'], $item['quantity']]);
+            $notes = !empty($item['notes']) ? (string)$item['notes'] : null;
+            try {
+                $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity, notes) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$transferId, $item['product_id'], $item['quantity'], $notes]);
+            } catch (Throwable $e) {
+                $stmt = $db->prepare('INSERT INTO inventory_transfer_items (transfer_id, product_id, quantity) VALUES (?, ?, ?)');
+                $stmt->execute([$transferId, $item['product_id'], $item['quantity']]);
+            }
         }
 
         $transferDate = $data['transfer_date'] ? date('Y-m-d', strtotime($data['transfer_date'])) : date('Y-m-d');

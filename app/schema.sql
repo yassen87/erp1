@@ -250,6 +250,7 @@ CREATE TABLE IF NOT EXISTS inventory_transfer_items (
   transfer_id INT NOT NULL,
   product_id INT NOT NULL,
   quantity DECIMAL(14,3) NOT NULL,
+  notes VARCHAR(255) NULL,
   CONSTRAINT fk_transfer_item_transfer FOREIGN KEY (transfer_id) REFERENCES inventory_transfers(id) ON DELETE CASCADE,
   CONSTRAINT fk_transfer_item_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

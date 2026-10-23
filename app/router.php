@@ -453,6 +453,39 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
+    if ($route === 'transfer_branch_products') {
+        require_login();
+        if (!has_permission('transfers')) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'غير مصرح لك بإدارة التحويلات.']);
+            exit;
+        }
+        $locationId = (int) ($_GET['location_id'] ?? 0);
+        if ($locationId <= 0) {
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'معرف الفرع مطلوب.']);
+            exit;
+        }
+
+        $allProducts = all_products_with_stock($locationId, null, false);
+        $products = array_values(array_filter($allProducts, fn($p) => $p['type'] !== 'recipe'));
+        $recipes = saved_recipes();
+        foreach ($recipes as &$r) {
+            $r['components'] = recipe_components_for((int)$r['id']);
+        }
+        unset($r);
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => true,
+            'products' => $products,
+            'recipes' => $recipes
+        ]);
+        exit;
+    }
+
     if ($route === 'api_latest_update') {
         header('Content-Type: application/json; charset=utf-8');
         $latest = get_latest_system_update();

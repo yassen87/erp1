@@ -28,7 +28,8 @@ if (!empty($transferIds)) {
         $transferItemsMap[$item['transfer_id']][] = [
             'product_name' => $item['product_name'],
             'product_unit' => $item['product_unit'],
-            'quantity' => (float)$item['quantity']
+            'quantity' => (float)$item['quantity'],
+            'notes' => $item['notes'] ?? null
         ];
     }
 }
@@ -322,8 +323,12 @@ function showTransferItems(transferId) {
     items.forEach(item => {
         const tr = document.createElement('tr');
         const unitLabel = item.product_unit === 'gram' ? 'جرام' : 'قطعة';
+        const noteBadge = item.notes ? `<div style="font-size:11px; color:var(--gold, #c9a84c); font-weight:600; margin-top:2px;">🏷️ ${escapeHtml(item.notes)}</div>` : '';
         tr.innerHTML = `
-            <td style="font-weight:700; color:var(--ink);">${escapeHtml(item.product_name)}</td>
+            <td style="font-weight:700; color:var(--ink);">
+                ${escapeHtml(item.product_name)}
+                ${noteBadge}
+            </td>
             <td><span class="badge" style="font-size:10px; padding:2px 6px;">${escapeHtml(unitLabel)}</span></td>
             <td style="font-weight:800; text-align:center; color:var(--primary); font-size:14px;">${item.quantity}</td>
         `;
