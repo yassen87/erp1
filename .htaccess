@@ -1,0 +1,25 @@
+# Hamza for Perfumes ERP - Hostinger & Apache Configuration
+Options -Indexes
+RewriteEngine On
+
+# Allow direct access to existing files and directories (assets, css, js, images)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Route all other requests to index.php
+RewriteRule ^ index.php [QSA,L]
+
+# Protect sensitive files and directories
+<FilesMatch "^(config\.php|\.env|\.git.*|.*\.sql|.*\.bat|.*\.rar|.*\.zip)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Block access to storage logs and temp files directly
+RedirectMatch 403 ^/storage/.*\.log$
