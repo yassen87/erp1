@@ -13,7 +13,7 @@ $selectedLocationId = (int)($_GET['location_id'] ?? ($userLocationId ?: ($locati
 $stockMap = [];
 if ($selectedLocationId > 0) {
     try {
-        $stmtStock = pdo()->prepare('SELECT product_id, quantity FROM inventory_levels WHERE location_id = ?');
+        $stmtStock = pdo()->prepare('SELECT product_id, quantity FROM inventory_balances WHERE location_id = ?');
         $stmtStock->execute([$selectedLocationId]);
         $stockMap = $stmtStock->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
     } catch (Throwable $e) {
