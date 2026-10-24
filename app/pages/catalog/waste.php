@@ -12,9 +12,13 @@ $selectedLocationId = (int)($_GET['location_id'] ?? ($userLocationId ?: ($locati
 // Pre-load stock for all products in this location
 $stockMap = [];
 if ($selectedLocationId > 0) {
-    $stmtStock = pdo()->prepare('SELECT product_id, quantity FROM inventory_levels WHERE location_id = ?');
-    $stmtStock->execute([$selectedLocationId]);
-    $stockMap = $stmtStock->fetchAll(PDO::FETCH_KEY_PAIR);
+    try {
+        $stmtStock = pdo()->prepare('SELECT product_id, quantity FROM inventory_levels WHERE location_id = ?');
+        $stmtStock->execute([$selectedLocationId]);
+        $stockMap = $stmtStock->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+    } catch (Throwable $e) {
+        $stockMap = [];
+    }
 }
 
 // Build structured products list with category and live stock

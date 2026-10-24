@@ -6194,25 +6194,54 @@ function find_formula_default(int $id): ?array
 
 function all_wasted_products(?int $locationId = null): array
 {
-    $sql = 'SELECT w.*, p.name AS product_name, l.name AS location_name, u.name AS user_name 
-            FROM wasted_products w 
-            JOIN products p ON p.id = w.product_id 
-            JOIN locations l ON l.id = w.location_id 
-            JOIN users u ON u.id = w.created_by';
-    $params = [];
-    if ($locationId !== null) {
-        $sql .= ' WHERE w.location_id = ?';
-        $params[] = $locationId;
+    $db = pdo();
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS wasted_products (
+            id INT AUTO_INCREMENT PRIMARY KEY, 
+            location_id INT NOT NULL, 
+            product_id INT NOT NULL, 
+            quantity DECIMAL(14,3) NOT NULL, 
+            reason VARCHAR(255) NULL, 
+            created_by INT NOT NULL, 
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Throwable $e) {}
+
+    try {
+        $sql = 'SELECT w.*, p.name AS product_name, l.name AS location_name, u.name AS user_name 
+                FROM wasted_products w 
+                LEFT JOIN products p ON p.id = w.product_id 
+                LEFT JOIN locations l ON l.id = w.location_id 
+                LEFT JOIN users u ON u.id = w.created_by';
+        $params = [];
+        if ($locationId !== null) {
+            $sql .= ' WHERE w.location_id = ?';
+            $params[] = $locationId;
+        }
+        $sql .= ' ORDER BY w.created_at DESC';
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll() ?: [];
+    } catch (Throwable $e) {
+        return [];
     }
-    $sql .= ' ORDER BY w.created_at DESC';
-    $stmt = pdo()->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetchAll();
 }
 
 function add_wasted_product(array $data, int $userId): void
 {
     $db = pdo();
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS wasted_products (
+            id INT AUTO_INCREMENT PRIMARY KEY, 
+            location_id INT NOT NULL, 
+            product_id INT NOT NULL, 
+            quantity DECIMAL(14,3) NOT NULL, 
+            reason VARCHAR(255) NULL, 
+            created_by INT NOT NULL, 
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Throwable $e) {}
+
     $db->beginTransaction();
     try {
         $locationId = (int) $data['location_id'];
