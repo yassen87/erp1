@@ -5347,7 +5347,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         try {
-            const res = await fetch(`index.php?r=api_customer_invoices&customer_id=${customerId}&location_id=${POS_LOCATION_ID}`);
+            const res = await fetch(`index.php?r=api_customer_invoices&customer_id=${customerId}`);
             const data = await res.json();
             if (data.success && Array.isArray(data.invoices)) {
                 customerInvoicesCache[customerId] = data.invoices;
@@ -5379,14 +5379,12 @@ document.addEventListener('DOMContentLoaded', function() {
         updateReturnSelectionSummary();
 
         if (customerId) {
-            if (customerInvoicesCache[customerId]) {
-                renderCustomerInvoices(customerInvoicesCache[customerId]);
-            } else {
-                if (body) body.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);"><span style="font-size: 24px;">⏳</span><br>جاري تحميل فواتير العميل...</div>';
-                loadCustomerInvoices(customerId).then(() => {
-                    renderCustomerInvoices(customerInvoicesCache[customerId] || []);
-                });
-            }
+            // Always re-fetch to get invoices from all branches (don't rely on cache)
+            delete customerInvoicesCache[customerId];
+            if (body) body.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);"><span style="font-size: 24px;">⏳</span><br>جاري تحميل فواتير العميل...</div>';
+            loadCustomerInvoices(customerId).then(() => {
+                renderCustomerInvoices(customerInvoicesCache[customerId] || []);
+            });
         } else {
             // No customer selected -> fetch recent invoices
             if (body) body.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);"><span style="font-size: 24px;">⏳</span><br>جاري تحميل آخر الفواتير...</div>';
