@@ -537,7 +537,7 @@ function handle_ajax_requests(string $route): void
         }
         
         $barcode = trim((string) ($_GET['barcode'] ?? $_POST['barcode'] ?? ''));
-        $locationId = (int) ($_GET['location_id'] ?? $_POST['location_id'] ?? current_user_location_id() ?? 0);
+        $locationId = (int) ($_GET['location_id'] ?? $_POST['location_id'] ?? ($_SESSION['pos_location_id'] ?? 0) ?: (current_user_location_id() ?? 0));
         
         if (!$barcode) {
             header('Content-Type: application/json');
@@ -547,7 +547,7 @@ function handle_ajax_requests(string $route): void
         
         // Check if user can access this location
         $userLocationId = current_user_location_id();
-        if ($userLocationId !== null && $locationId > 0 && $userLocationId !== $locationId) {
+        if ($userLocationId !== null && $locationId > 0 && $userLocationId !== $locationId && !has_permission('pos') && !has_permission('admin')) {
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'غير مصرح']);

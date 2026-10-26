@@ -1,11 +1,47 @@
 <?php
-$locations = sale_locations();
-$userLocationId = current_user_location_id() ?? (defined('BRANCH_LOCATION_ID') && (int)BRANCH_LOCATION_ID > 0 ? (int)BRANCH_LOCATION_ID : null);
-if ($userLocationId !== null) {
-    $locations = array_values(array_filter($locations, fn ($l) => (int) $l['id'] === $userLocationId));
+$allSaleLocations = sale_locations();
+
+// Support switching branch via URL parameter and persist in session
+if (isset($_GET['location_id']) && (int)$_GET['location_id'] > 0) {
+    $_SESSION['pos_location_id'] = (int)$_GET['location_id'];
 }
-// Use the user's branch or the first available branch for stock lookup
-$posLocationId = $userLocationId ?? (int) ($locations[0]['id'] ?? 0);
+
+$userLocationId = current_user_location_id() ?? (defined('BRANCH_LOCATION_ID') && (int)BRANCH_LOCATION_ID > 0 ? (int)BRANCH_LOCATION_ID : null);
+
+// If user explicitly picked a location or has one in session, use it
+$posLocationId = (int)($_SESSION['pos_location_id'] ?? 0);
+
+// If not explicitly picked yet:
+if ($posLocationId <= 0) {
+    if ($userLocationId !== null) {
+        $posLocationId = $userLocationId;
+    } else {
+        // Default to المنوات (location id 3 or name containing المنوات) if present, otherwise first available
+        foreach ($allSaleLocations as $loc) {
+            if (str_contains($loc['name'], 'المنوات') || (int)$loc['id'] === 3) {
+                $posLocationId = (int)$loc['id'];
+                break;
+            }
+        }
+        if ($posLocationId <= 0) {
+            $posLocationId = (int)($allSaleLocations[0]['id'] ?? 0);
+        }
+    }
+}
+
+// Ensure posLocationId is saved in session
+$_SESSION['pos_location_id'] = $posLocationId;
+
+// Resolve current branch name
+$currentLocationName = 'فرع غير محدد';
+foreach ($allSaleLocations as $l) {
+    if ((int)$l['id'] === (int)$posLocationId) {
+        $currentLocationName = $l['name'];
+        break;
+    }
+}
+
+$locations = $allSaleLocations;
 $allProductsWithStock = array_values(all_products_with_stock($posLocationId ?: null, null, true));
 // Filter: show only products with type != recipe
 $products = array_values(array_filter($allProductsWithStock, fn($p) => $p['type'] !== 'recipe'));
@@ -89,6 +125,52 @@ $paymentDestinations = [
     margin-bottom: 22px !important;
     position: relative;
     overflow: visible !important;
+}
+
+/* ===== شريط اختيار وتبديل الفرع في الكاشير ===== */
+.pos-branch-switcher-bar {
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.16), rgba(201, 168, 76, 0.05));
+    border: 1.5px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 4px 16px rgba(201, 168, 76, 0.12);
+}
+
+.btn-pos-branch-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.btn-pos-branch-tab:hover {
+    border-color: var(--gold);
+    background: var(--gold-soft);
+    color: var(--gold-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(201, 168, 76, 0.2);
+}
+
+.btn-pos-branch-tab.active {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold)) !important;
+    color: #fff !important;
+    border-color: var(--gold-dark) !important;
+    box-shadow: 0 4px 14px rgba(201, 168, 76, 0.35) !important;
 }
 
 /* شريط ذهبي علوي للبطاقات */
@@ -1025,6 +1107,38 @@ option.low-stock {
     </div>
 </section>
 
+<!-- Branch Selection Bar -->
+<div class="pos-branch-switcher-bar">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-size: 22px;">📍</span>
+        <div>
+            <div style="font-size: 11px; color: var(--muted); font-weight: 700;">الفرع النشط حالياً في الكاشير (رصيد المخزون والباركود):</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--gold-dark); display: flex; align-items: center; gap: 8px;">
+                <span><?= e($currentLocationName) ?></span>
+                <span class="badge" style="background: rgba(16,185,129,0.15); color: #059669; font-size: 11px; padding: 2px 8px; border-radius: 6px;">نشط 🟢</span>
+            </div>
+        </div>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span style="font-size: 12.5px; font-weight: 800; color: var(--ink);">🏢 اختر الفرع الذي تبيع منه:</span>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <?php foreach ($allSaleLocations as $loc): 
+                $isActive = (int)$loc['id'] === (int)$posLocationId;
+            ?>
+                <a href="index.php?r=pos&location_id=<?= (int)$loc['id'] ?>" 
+                   class="btn-pos-branch-tab <?= $isActive ? 'active' : '' ?>"
+                   title="التبديل إلى <?= e($loc['name']) ?>">
+                    📍 <?= e($loc['name']) ?>
+                    <?php if ($isActive): ?>
+                        <span style="margin-right: 4px; font-weight: 900;">✓</span>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
 <!-- Barcode Scanner Input -->
 <div class="barcode-scanner-bar">
     <div class="scanner-status">
@@ -1421,20 +1535,13 @@ option.low-stock {
 
             <div style="display: grid; gap: 10px;">
                 <label>موقع البيع والقناة
-                    <?php if ($userLocationId !== null): ?>
-                        <select name="location_id" disabled>
-                            <?php foreach ($locations as $l): ?>
-                                <option value="<?= e($l['id']) ?>" selected><?= e($l['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <input type="hidden" name="location_id" value="<?= e($userLocationId) ?>">
-                    <?php else: ?>
-                        <select name="location_id" required>
-                            <?php foreach ($locations as $l): ?>
-                                <option value="<?= e($l['id']) ?>"><?= e($l['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    <?php endif; ?>
+                    <select name="location_id" id="pos_checkout_location_select" onchange="window.location.href='index.php?r=pos&location_id=' + this.value" required>
+                        <?php foreach ($allSaleLocations as $l): ?>
+                            <option value="<?= e($l['id']) ?>" <?= (int)$l['id'] === (int)$posLocationId ? 'selected' : '' ?>>
+                                📍 <?= e($l['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
                 </label>
 
                 <div>
