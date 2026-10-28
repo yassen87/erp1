@@ -28,7 +28,7 @@ function money(mixed $value): string
 
 function qty(mixed $value): string
 {
-    return rtrim(rtrim(number_format((float) $value, 3, '.', ''), '0'), '.');
+    return rtrim(rtrim(number_format((float) $value, 6, '.', ''), '0'), '.');
 }
 
 function format_datetime(?string $datetime): string

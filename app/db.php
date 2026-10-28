@@ -94,6 +94,10 @@ function ensure_schema_updates(): void
         "ALTER TABLE users ADD COLUMN phone VARCHAR(30) NULL",
         "UPDATE locations SET type = 'branch', is_active = 1 WHERE id = 2 OR name LIKE '%خنان%'",
         "ALTER TABLE inventory_transfer_items ADD COLUMN notes VARCHAR(255) NULL",
+        "ALTER TABLE inventory_balances MODIFY COLUMN quantity DECIMAL(18,6) NOT NULL DEFAULT 0",
+        "ALTER TABLE inventory_movements MODIFY COLUMN quantity_delta DECIMAL(18,6) NOT NULL",
+        "ALTER TABLE inventory_transfer_items MODIFY COLUMN quantity DECIMAL(18,6) NOT NULL",
+        "ALTER TABLE wasted_products MODIFY COLUMN quantity DECIMAL(18,6) NOT NULL",
     ];
     // Migration: branch_targets from target_month to target_date
     try {

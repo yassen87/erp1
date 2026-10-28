@@ -271,21 +271,21 @@ foreach ($rows as $r) {
     <div class="waste-kpi-card">
         <div class="waste-kpi-icon">🧪</div>
         <div>
-            <div class="waste-kpi-num" style="color: #d97706;"><?= number_format($oilWasteGrams, 1) ?> جم</div>
+            <div class="waste-kpi-num" style="color: #d97706;"><?= qty($oilWasteGrams) ?> جم</div>
             <div class="waste-kpi-label">إجمالي هالك الزيوت العطرية</div>
         </div>
     </div>
     <div class="waste-kpi-card">
         <div class="waste-kpi-icon">🍾</div>
         <div>
-            <div class="waste-kpi-num" style="color: #2563eb;"><?= number_format($bottleWasteUnits) ?> قطعة</div>
+            <div class="waste-kpi-num" style="color: #2563eb;"><?= qty($bottleWasteUnits) ?> قطعة</div>
             <div class="waste-kpi-label">إجمالي هالك الزجاجات</div>
         </div>
     </div>
     <div class="waste-kpi-card">
         <div class="waste-kpi-icon">📦</div>
         <div>
-            <div class="waste-kpi-num" style="color: #059669;"><?= number_format($productWasteUnits) ?> قطعة</div>
+            <div class="waste-kpi-num" style="color: #059669;"><?= qty($productWasteUnits) ?> قطعة</div>
             <div class="waste-kpi-label">إجمالي هالك المنتجات الجاهزة</div>
         </div>
     </div>
@@ -376,7 +376,7 @@ foreach ($rows as $r) {
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px; margin-bottom: 16px;">
                 <label style="font-weight: 700; font-size: 13.5px;">
                     الكمية التالفة * (<span id="sel-prod-unit">وحدة</span>)
-                    <input type="number" name="quantity" id="waste-qty-input" min="0.001" step="any" required placeholder="أدخل الكمية..." style="margin-top: 6px; font-size: 16px; font-weight: 800; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--line);">
+                    <input type="number" name="quantity" id="waste-qty-input" min="0.000001" step="any" required placeholder="أدخل الكمية..." style="margin-top: 6px; font-size: 16px; font-weight: 800; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--line);">
                     <small class="muted" id="qty-limit-hint" style="font-size: 11px; display: block; margin-top: 4px;">لا يمكن تجاوز الرصيد المتاح.</small>
                 </label>
 
@@ -526,7 +526,8 @@ function selectWasteProduct(item) {
     document.getElementById('sel-prod-unit').textContent = item.unit;
 
     const qtyInput = document.getElementById('waste-qty-input');
-    qtyInput.step = item.step;
+    qtyInput.step = 'any';
+    qtyInput.min = '0.000001';
     qtyInput.value = '';
     qtyInput.max = item.stock > 0 ? item.stock : 0;
     document.getElementById('qty-limit-hint').textContent = `الرصيد المتاح حالياً: ${item.stock} ${item.unit}`;

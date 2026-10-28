@@ -599,7 +599,7 @@ function processBarcodeScan() {
     const addQty = prod.unit === 'gram' ? 10 : 1;
     const existing = transferCart.find(it => it.type === 'direct' && it.productId === prod.id);
     if (existing) {
-        existing.quantity = parseFloat((existing.quantity + addQty).toFixed(3));
+        existing.quantity = parseFloat((existing.quantity + addQty).toFixed(6));
     } else {
         transferCart.push({
             type: 'direct',
@@ -651,7 +651,7 @@ function addMixOilRow(perfumeId = null, grams = 0) {
             ${optionsHtml}
         </select>
         <div style="display:flex; align-items:center; gap:4px; flex:1;">
-            <input type="number" class="mix-oil-grams" placeholder="الجرام" value="${grams > 0 ? grams : ''}" step="any" min="0.001" style="width:100%; text-align:center; padding:7px; border-radius:6px; border:1px solid var(--line); font-weight:bold;" oninput="calcMixTotalGrams()">
+            <input type="number" class="mix-oil-grams" placeholder="الجرام" value="${grams > 0 ? grams : ''}" step="any" min="0.000001" style="width:100%; text-align:center; padding:7px; border-radius:6px; border:1px solid var(--line); font-weight:bold;" oninput="calcMixTotalGrams()">
             <span style="font-size:12px; color:var(--muted);">جم</span>
         </div>
         <button type="button" class="btn small danger" onclick="removeMixOilRow('${rowId}')" style="width:30px; height:30px; padding:0; line-height:1;">✕</button>
@@ -869,7 +869,7 @@ function renderTransferCart() {
                 <td style="padding:10px 8px; text-align:center;">
                     <div style="display:inline-flex; align-items:center; gap:4px;">
                         <button type="button" class="btn small" onclick="changeCartDirectQty(${index}, -1)">-</button>
-                        <input type="number" value="${item.quantity}" step="any" min="0.001" style="width:65px; text-align:center; padding:3px; border-radius:4px; border:1px solid var(--line); font-weight:bold;" onchange="updateCartDirectQtyManual(${index}, this.value)">
+                        <input type="number" value="${item.quantity}" step="any" min="0.000001" style="width:88px; text-align:center; padding:3px; border-radius:4px; border:1px solid var(--line); font-weight:bold;" onchange="updateCartDirectQtyManual(${index}, this.value)">
                         <button type="button" class="btn small" onclick="changeCartDirectQty(${index}, 1)">+</button>
                     </div>
                     <div style="font-size:10px; color:var(--muted);">${unitLabel}</div>
@@ -931,16 +931,16 @@ function updateSummaryCounters(totalLines, totalPieces, totalOilsGrams) {
 
 function changeCartDirectQty(index, delta) {
     if (!transferCart[index]) return;
-    let newQty = parseFloat((transferCart[index].quantity + delta).toFixed(3));
-    if (newQty < 0.001) newQty = 0.001;
+    let newQty = parseFloat((transferCart[index].quantity + delta).toFixed(6));
+    if (newQty < 0.000001) newQty = 0.000001;
     transferCart[index].quantity = newQty;
     renderTransferCart();
 }
 
 function updateCartDirectQtyManual(index, val) {
     if (!transferCart[index]) return;
-    let newQty = parseFloat(val) || 0.001;
-    if (newQty < 0.001) newQty = 0.001;
+    let newQty = parseFloat(val) || 0;
+    if (newQty < 0.000001) newQty = 0.000001;
     transferCart[index].quantity = newQty;
     renderTransferCart();
 }
