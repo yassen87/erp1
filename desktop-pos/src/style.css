@@ -554,3 +554,99 @@ input:focus, select:focus, textarea:focus {
         background: #fff;
     }
 }
+
+/* ===== ERP Pages Navigation Strip ===== */
+.erp-nav-strip {
+    background: #17110F;
+    border-bottom: 1.5px solid var(--line);
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+    position: sticky;
+    top: 64px;
+    z-index: 90;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.erp-nav-strip::-webkit-scrollbar {
+    height: 4px;
+}
+
+.erp-nav-pill {
+    background: var(--surface-soft);
+    border: 1px solid var(--line-light);
+    color: var(--ink-muted);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.erp-nav-pill:hover {
+    background: var(--gold-soft);
+    color: var(--ink);
+    border-color: var(--gold);
+}
+
+.erp-nav-pill.active {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 900;
+    box-shadow: 0 2px 8px rgba(201, 168, 76, 0.4);
+}
+
+.erp-nav-pill.pos-highlight {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34D399;
+}
+
+.erp-nav-pill.pos-highlight.active {
+    background: linear-gradient(135deg, #059669, #10B981);
+    border-color: #10B981;
+    color: #000;
+    font-weight: 900;
+}
+
+/* ERP Embedded Web Container */
+#erp-frame-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 106px);
+    width: 100%;
+    position: relative;
+    background: var(--bg-dark);
+}
+
+#erp-iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+}
+
+.erp-offline-banner {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(20, 15, 13, 0.95));
+    border: 1.5px solid var(--warning);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+

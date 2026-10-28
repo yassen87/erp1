@@ -65,6 +65,7 @@ window.playBeep = playBeep;
 window.addEventListener('DOMContentLoaded', async () => {
     // Open DB and setup Sync Engine
     await openPOSDatabase();
+    await seedInitialDataIfNeeded();
     await window.syncEngine.init();
 
     // Register Sync listener
@@ -95,6 +96,46 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.syncEngine.syncAll();
     }
 });
+
+// Switch between Offline POS and live ERP website pages
+function switchMainView(route, btnEl) {
+    const posView = document.getElementById('pos-view-container');
+    const erpView = document.getElementById('erp-frame-container');
+    const erpIframe = document.getElementById('erp-iframe');
+    const erpWarning = document.getElementById('erp-offline-warning');
+    const pills = document.querySelectorAll('.erp-nav-pill');
+
+    pills.forEach(p => p.classList.remove('active'));
+    if (btnEl) {
+        btnEl.classList.add('active');
+    } else {
+        const firstPill = document.querySelector('.erp-nav-pill');
+        if (firstPill && route === 'pos') firstPill.classList.add('active');
+    }
+
+    if (route === 'pos') {
+        erpView.style.display = 'none';
+        posView.style.display = 'grid';
+        const barcodeInput = document.getElementById('barcode-input');
+        if (barcodeInput) barcodeInput.focus();
+    } else {
+        posView.style.display = 'none';
+        erpView.style.display = 'flex';
+
+        if (!window.syncEngine.isOnline) {
+            erpWarning.style.display = 'flex';
+        } else {
+            erpWarning.style.display = 'none';
+        }
+
+        const targetUrl = `${window.syncEngine.serverUrl}/index.php?r=${route}`;
+        if (erpIframe.src !== targetUrl) {
+            erpIframe.src = targetUrl;
+        }
+    }
+}
+window.switchMainView = switchMainView;
+
 
 // Update Header Sync Badge
 function updateSyncBadge(info) {

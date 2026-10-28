@@ -231,3 +231,19 @@ async function setSetting(key, value) {
 function generateUUID() {
     return 'inv_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 9);
 }
+
+/**
+ * Seeds initial database data from pre-bundled snapshot if local store is empty
+ */
+async function seedInitialDataIfNeeded() {
+    if (window.INITIAL_CATALOG_DATA) {
+        const existingProds = await getAllFromStore('products');
+        if (!existingProds || existingProds.length === 0) {
+            console.log('Seeding initial catalog data into local storage...');
+            await saveCatalogData(window.INITIAL_CATALOG_DATA);
+            return true;
+        }
+    }
+    return false;
+}
+

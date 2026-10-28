@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حمزة للعطور — كاشير ونقطة بيع الفروع (أوفلاين)</title>
+    <title>حمزة للعطور — كاشير ونظام الفروع المتكامل</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,8 +13,8 @@
         <div class="brand-section">
             <img src="logo.png" alt="حمزة للعطور" class="brand-logo">
             <div>
-                <div class="brand-title">حمزة للعطور — كاشير الفروع</div>
-                <div class="brand-subtitle">نظام المبيعات ونقطة البيع الأوفلاين السحابي</div>
+                <div class="brand-title">حمزة للعطور — نظام الكاشير والفروع</div>
+                <div class="brand-subtitle">يعمل أوفلاين 100% مع مزامنة سحابية فورية</div>
             </div>
         </div>
 
@@ -37,8 +37,79 @@
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="pos-layout">
+    <!-- All Website Pages Navigation Strip -->
+    <nav class="erp-nav-strip" id="erp-nav-strip">
+        <button type="button" class="erp-nav-pill pos-highlight active" onclick="switchMainView('pos', this)">
+            🛒 الكاشير ونقطة البيع (أوفلاين)
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('dashboard', this)">
+            📊 لوحة التحكم
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('products', this)">
+            📦 المنتجات والأسعار
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('branch_inventory', this)">
+            🏬 مخزون الفرع والجرد
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('transfers_branch', this)">
+            🔄 تحويلات الفروع
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('transfers_supply', this)">
+            🚚 أوامر التوريد
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('waste', this)">
+            🗑️ الهالك والتالف
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('customers', this)">
+            👥 العملاء والديون
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('shifts', this)">
+            ⏱️ تقفيل الشيفتات
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('expenses', this)">
+            💰 المصروفات والخزينة
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('reports_sales', this)">
+            📈 تقارير المبيعات
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('recipes', this)">
+            📜 التركيبات الجاهزة
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('formula_defaults', this)">
+            ⚖️ الجرامات الافتراضية
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('offers', this)">
+            🎁 العروض والباكدجات
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('customer_surveys', this)">
+            💬 استبيانات الرضا
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('customer_birthdays', this)">
+            🎂 أعياد الميلاد
+        </button>
+        <button type="button" class="erp-nav-pill" onclick="switchMainView('users', this)">
+            👤 المستخدمين
+        </button>
+    </nav>
+
+    <!-- Embedded Web ERP Frame Container (For browsing all website pages) -->
+    <div id="erp-frame-container" style="display: none;">
+        <div id="erp-offline-warning" class="erp-offline-banner" style="display: none;">
+            <div>
+                <strong style="color: var(--warning); font-size: 14px;">⚠️ أنت تعمل حالياً بدون اتصال إنترنت (أوفلاين)</strong>
+                <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">
+                    صفحات الإدارة والتقارير تحتاج إنترنت للتحديث المباشر. يمكنك استخدام <strong>الكاشير ونقطة البيع</strong> فهو يعمل 100% بدون إنترنت مع خصم المخزون فورياً.
+                </div>
+            </div>
+            <button type="button" class="btn primary" onclick="switchMainView('pos')" style="padding: 6px 14px; font-size: 12px;">
+                الرجوع للكاشير 🛒
+            </button>
+        </div>
+        <iframe id="erp-iframe" src="" loading="lazy"></iframe>
+    </div>
+
+    <!-- Main Offline POS Container -->
+    <main class="pos-layout" id="pos-view-container">
 
         <!-- Left Column: Basket & Add Items -->
         <div class="pos-main-panel">
@@ -334,7 +405,7 @@
                         <ul style="margin-right: 18px; margin-top: 6px; line-height: 1.8; color: var(--ink-muted);">
                             <li>البرنامج يحفظ كل الفواتير محلياً في جهاز الكمبيوتر فورياً وبدون تأخير.</li>
                             <li>عند توفر الإنترنت، يقوم البرنامج تلقائياً بإرسال الفواتير للسيرفر السحابي وتحديث المخزون.</li>
-                            <li>يمكنك الضغط على زر "مزامنة الآن" في أي وقت لسحب أحدث الأسعار والمنتجات.</li>
+                            <li>تم تزويد الكاشير بكافة الأصناف والعملاء مسبقاً (592 صنف و 2,018 عميل) ليعمل مباشرة.</li>
                         </ul>
                     </div>
                 </div>
@@ -350,6 +421,7 @@
     <div id="thermal-receipt" style="display: none;"></div>
 
     <!-- Scripts -->
+    <script src="initial_data.js"></script>
     <script src="db.js"></script>
     <script src="sync.js"></script>
     <script src="app.js"></script>
