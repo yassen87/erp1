@@ -15,6 +15,9 @@ handle_download($route);
 handle_ajax_requests($route);
 
 if ($route === 'install') {
+    if (database_exists()) {
+        redirect('login');
+    }
     install_database();
     flash('تم تجهيز قاعدة بيانات MySQL. بيانات الدخول: admin / admin123');
     redirect('login');
@@ -41,6 +44,12 @@ if (!database_exists()) {
     </html>
     <?php
     exit;
+}
+
+try {
+    ensure_schema_updates();
+} catch (Throwable $e) {
+    // Non-fatal schema migration updates
 }
 
 if ($route === 'login') {

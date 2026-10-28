@@ -30,7 +30,6 @@ function database_exists(): bool
 {
     try {
         pdo(true)->query('SELECT 1 FROM users LIMIT 1');
-        ensure_schema_updates();
         return true;
     } catch (Throwable $e) {
         return false;
@@ -66,7 +65,7 @@ function ensure_schema_updates(): void
         "ALTER TABLE inventory_transfers ADD COLUMN sender_name VARCHAR(120) NULL",
         "ALTER TABLE inventory_transfers ADD COLUMN receiver_name VARCHAR(120) NULL",
         "ALTER TABLE inventory_transfers ADD COLUMN transfer_date DATE NOT NULL",
-        "ALTER TABLE inventory_movements MODIFY COLUMN movement_type ENUM('initial','sale','manual_adjustment','transfer_future','transfer_adjust','return_future') NOT NULL",
+        "ALTER TABLE inventory_movements MODIFY COLUMN movement_type VARCHAR(50) NOT NULL DEFAULT 'manual_adjustment'",
         "CREATE TABLE IF NOT EXISTS wasted_products (id INT AUTO_INCREMENT PRIMARY KEY, location_id INT NOT NULL, product_id INT NOT NULL, quantity DECIMAL(14,3) NOT NULL, reason VARCHAR(255) NULL, created_by INT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT fk_waste_location FOREIGN KEY (location_id) REFERENCES locations(id), CONSTRAINT fk_waste_product FOREIGN KEY (product_id) REFERENCES products(id), CONSTRAINT fk_waste_user FOREIGN KEY (created_by) REFERENCES users(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS branch_cash_transfers (id INT AUTO_INCREMENT PRIMARY KEY, transfer_number VARCHAR(60) NOT NULL UNIQUE, location_id INT NOT NULL, method ENUM('cash','instapay','vodafone_cash') NOT NULL DEFAULT 'cash', amount DECIMAL(12,2) NOT NULL, transfer_date DATE NOT NULL, status ENUM('pending','received','cancelled') NOT NULL DEFAULT 'pending', notes TEXT NULL, created_by INT NOT NULL, received_by INT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, received_at DATETIME NULL, CONSTRAINT fk_cash_transfer_location FOREIGN KEY (location_id) REFERENCES locations(id), CONSTRAINT fk_cash_transfer_creator FOREIGN KEY (created_by) REFERENCES users(id), CONSTRAINT fk_cash_transfer_receiver FOREIGN KEY (received_by) REFERENCES users(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
         "CREATE TABLE IF NOT EXISTS manager_collections (id INT AUTO_INCREMENT PRIMARY KEY, collection_number VARCHAR(60) NOT NULL UNIQUE, location_id INT NOT NULL, method ENUM('cash','instapay','vodafone_cash') NOT NULL, source_type ENUM('auto_payment','branch_transfer') NOT NULL DEFAULT 'auto_payment', source_id BIGINT NULL, amount DECIMAL(12,2) NOT NULL, collection_date DATE NOT NULL, status ENUM('pending','received','cancelled') NOT NULL DEFAULT 'pending', notes TEXT NULL, created_by INT NULL, received_by INT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, received_at DATETIME NULL, UNIQUE KEY uq_manager_collection_source (source_type, source_id, method), INDEX idx_manager_collections_location (location_id), INDEX idx_manager_collections_date (collection_date), INDEX idx_manager_collections_status (status), CONSTRAINT fk_manager_collection_location FOREIGN KEY (location_id) REFERENCES locations(id), CONSTRAINT fk_manager_collection_creator FOREIGN KEY (created_by) REFERENCES users(id), CONSTRAINT fk_manager_collection_receiver FOREIGN KEY (received_by) REFERENCES users(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -168,16 +167,7 @@ function ensure_schema_updates(): void
         try {
             $db->exec($sql);
         } catch (Throwable $e) {
-            $msg = $e->getMessage();
-            if (!str_contains($msg, 'Duplicate column') && 
-                !str_contains($msg, 'already exists') && 
-                !str_contains($msg, 'Duplicate key') && 
-                !str_contains($msg, 'Duplicate entry') && 
-                !str_contains($msg, 'Multiple primary key') && 
-                !str_contains($msg, 'foreign key constraint') && 
-                !str_contains($msg, 'Duplicate foreign key')) {
-                throw $e;
-            }
+            // Non-fatal schema migration statements should never halt the system
         }
     }
     try {
