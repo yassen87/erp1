@@ -5,10 +5,128 @@ declare(strict_types=1);
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/services.php';
+require_once __DIR__ . '/sync.php';
 require_once __DIR__ . '/navigation.php';
 
 function handle_ajax_requests(string $route): void
 {
+    // ===== Offline Sync APIs =====
+    if ($route === 'api_sync_ping') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success'     => true,
+            'server_time' => date('Y-m-d H:i:s'),
+            'app_name'    => APP_NAME,
+            'status'      => 'online'
+        ]);
+        exit;
+    }
+
+    if ($route === 'api_sync_login') {
+        header('Content-Type: application/json; charset=utf-8');
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true) ?: $_POST;
+        $username = trim((string)($data['username'] ?? ''));
+        $password = (string)($data['password'] ?? '');
+
+        if (!$username || !$password) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'اسم المستخدم وكلمة المرور مطلوبان']);
+            exit;
+        }
+
+        $stmt = pdo()->prepare('SELECT u.*, r.code AS role_code, r.name AS role_name, l.name AS location_name 
+                                FROM users u 
+                                JOIN roles r ON r.id = u.role_id 
+                                LEFT JOIN locations l ON l.id = u.location_id 
+                                WHERE u.username = ? AND u.is_active = 1 LIMIT 1');
+        $stmt->execute([$username]);
+        $user = $stmt->fetch();
+
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'بيانات الدخول غير صحيحة']);
+            exit;
+        }
+
+        $token = generate_sync_token($user);
+        $_SESSION['user_id'] = (int)$user['id'];
+
+        echo json_encode([
+            'success' => true,
+            'token'   => $token,
+            'user'    => [
+                'id'            => (int)$user['id'],
+                'name'          => $user['name'],
+                'username'      => $user['username'],
+                'role_code'     => $user['role_code'],
+                'location_id'   => $user['location_id'] ? (int)$user['location_id'] : null,
+                'location_name' => $user['location_name'] ?? null,
+            ],
+            'server_time' => date('Y-m-d H:i:s'),
+        ]);
+        exit;
+    }
+
+    if ($route === 'api_sync_pull') {
+        header('Content-Type: application/json; charset=utf-8');
+        $user = resolve_api_user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'غير مصرح - يرجى تسجيل الدخول أولاً']);
+            exit;
+        }
+
+        $locationId = (int)($_GET['location_id'] ?? $_POST['location_id'] ?? ($user['location_id'] ?? 0));
+        if ($locationId <= 0) {
+            $locations = sale_locations();
+            $locationId = (int)($locations[0]['id'] ?? 1);
+        }
+
+        try {
+            $data = get_sync_pull_data($locationId);
+            echo json_encode($data, JSON_UNESCAPED_UNICODE);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    if ($route === 'api_sync_push') {
+        header('Content-Type: application/json; charset=utf-8');
+        $user = resolve_api_user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'غير مصرح - يرجى تسجيل الدخول']);
+            exit;
+        }
+
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true) ?: $_POST;
+
+        $invoices = $data['invoices'] ?? [];
+        if (empty($invoices) || !is_array($invoices)) {
+            echo json_encode(['success' => true, 'synced_count' => 0, 'results' => [], 'message' => 'لا توجد فواتير للمزامنة']);
+            exit;
+        }
+
+        $defaultLocationId = (int)($data['location_id'] ?? ($user['location_id'] ?? 0));
+        if ($defaultLocationId <= 0) {
+            $locations = sale_locations();
+            $defaultLocationId = (int)($locations[0]['id'] ?? 1);
+        }
+
+        try {
+            $result = process_pushed_offline_invoices($invoices, $user, $defaultLocationId);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        } catch (Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     // Handle AJAX requests
     if ($route === 'pos_products') {
         require_login();

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حمزة للعطور — كاشير ونقطة بيع الفروع (أوفلاين)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header Bar -->
+    <header class="pos-header">
+        <div class="brand-section">
+            <img src="logo.png" alt="حمزة للعطور" class="brand-logo">
+            <div>
+                <div class="brand-title">حمزة للعطور — كاشير الفروع</div>
+                <div class="brand-subtitle">نظام المبيعات ونقطة البيع الأوفلاين السحابي</div>
+            </div>
+        </div>
+
+        <!-- Real-time Sync Status Badge -->
+        <div class="sync-status-badge offline" id="sync-status-badge" onclick="window.syncEngine.syncAll(true)" title="اضغط للمزامنة الفورية مع السيرفر السحابي">
+            <span class="status-dot"></span>
+            <span id="sync-status-text">جاري فحص الاتصال...</span>
+        </div>
+
+        <div class="header-controls">
+            <button type="button" class="btn-icon" onclick="window.syncEngine.syncAll(true)" title="مزامنة فورية">
+                🔄 مزامنة
+            </button>
+            <button type="button" class="btn-icon" onclick="openSettingsModal()" title="إعدادات السيرفر والطباعة">
+                ⚙️ الإعدادات
+            </button>
+            <button type="button" class="btn-icon" onclick="if(window.electronAPI) window.electronAPI.toggleFullscreen();" title="ملء الشاشة">
+                ⛶ شاشة كاملة
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="pos-layout">
+
+        <!-- Left Column: Basket & Add Items -->
+        <div class="pos-main-panel">
+
+            <!-- Barcode Scanner Input -->
+            <div class="barcode-box">
+                <div class="barcode-input-wrapper">
+                    <input type="text" id="barcode-input" placeholder="امسح باركود المنتج أو الزيت هنا (أو اكتب واضغط Enter)..." autofocus autocomplete="off">
+                    <span class="barcode-input-icon">📷</span>
+                </div>
+                <div id="barcode-feedback" style="font-size: 13px; font-weight: 800; min-width: 140px; text-align: center;"></div>
+            </div>
+
+            <!-- Branch Selection Bar -->
+            <div class="branch-bar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-weight: 800; font-size: 13.5px; color: var(--gold-light);">فرع البيع الحالي:</span>
+                    <select id="pos-branch-select" class="branch-select" onchange="onBranchChange(this.value)">
+                        <option value="3">📍 فرع المنوات</option>
+                        <option value="2">📍 فرع أم خنان</option>
+                    </select>
+                </div>
+                <span style="font-size: 11.5px; color: var(--ink-muted);">المخزون يتم خصمه محلياً وفورياً حتى أثناء انقطاع النت</span>
+            </div>
+
+            <!-- Add Items Section -->
+            <div class="panel">
+                <div class="tabs-nav">
+                    <button type="button" class="tab-btn active" id="tab-btn-direct" onclick="switchTab('direct')">📦 منتج مباشر</button>
+                    <button type="button" class="tab-btn" id="tab-btn-recipe" onclick="switchTab('recipe')">📜 تركيبة جاهزة</button>
+                    <button type="button" class="tab-btn" id="tab-btn-mix" onclick="switchTab('mix')">🧪 تركيبة فورية (تفصيل)</button>
+                    <button type="button" class="tab-btn" id="tab-btn-offer" onclick="switchTab('offer')">🎁 عروض ترويجية</button>
+                </div>
+
+                <!-- Tab 1: Direct Products -->
+                <div id="panel-direct" class="grid-form">
+                    <label style="grid-column: span 2;">اختر الصنف
+                        <select id="add-prod-select">
+                            <option value="">-- اختر صنف مباشر أو ابحث --</option>
+                        </select>
+                    </label>
+                    <label>الكمية
+                        <input id="add-prod-qty" type="number" step="any" min="0.000001" value="1">
+                    </label>
+                    <label>سعر الوحدة (ج.م)
+                        <input id="add-prod-price" type="number" step="any" min="0" placeholder="افتراضي">
+                    </label>
+                    <label>نوع الخصم
+                        <select id="add-prod-discount-type">
+                            <option value="">بدون خصم</option>
+                            <option value="amount">مبلغ ثابت</option>
+                            <option value="percent">نسبة مئوية %</option>
+                        </select>
+                    </label>
+                    <label>قيمة الخصم
+                        <input id="add-prod-discount-value" type="number" step="any" min="0" placeholder="0">
+                    </label>
+                    <div style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.08); padding: 8px 12px; border-radius: 8px; border: 1.5px dashed #10B981;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 700; color: #34D399;">
+                            <input type="checkbox" id="add-prod-is-gift" style="width: 18px; height: 18px; accent-color: #10B981;">
+                            <span>🎁 صرف هذا الصنف كهدية / عينة (السعر 0 وبدون خصم مخزون)</span>
+                        </label>
+                    </div>
+                    <button type="button" class="btn primary" onclick="addProductFromForm()" style="grid-column: span 2; height: 40px;">
+                        ➕ إضافة المنتج للسلة
+                    </button>
+                </div>
+
+                <!-- Tab 2: Saved Recipes -->
+                <div id="panel-recipe" class="grid-form" style="display: none;">
+                    <label style="grid-column: span 2;">اختر التركيبة الجاهزة
+                        <select id="add-recipe-select">
+                            <option value="">-- اختر تركيبة جاهزة --</option>
+                        </select>
+                    </label>
+                    <label style="grid-column: span 2;">السعر المخصص (اختياري)
+                        <input id="add-recipe-price" type="number" step="any" min="0" placeholder="اتركه فارغاً للسعر الافتراضي">
+                    </label>
+                    <button type="button" class="btn primary" onclick="addRecipeFromForm()" style="grid-column: span 2; height: 40px;">
+                        ➕ إضافة التركيبة للسلة
+                    </button>
+                </div>
+
+                <!-- Tab 3: Custom Instant Mix Builder -->
+                <div id="panel-mix" class="grid-form" style="display: none;">
+                    <label style="grid-column: span 2;">نوع الزجاجة
+                        <select id="mix-bottle-select" onchange="recalculateMixPrice()">
+                            <option value="">-- اختر الزجاجة --</option>
+                            <option value="no_bottle">بدون زجاجة (زيت فقط)</option>
+                        </select>
+                    </label>
+
+                    <div style="grid-column: span 2; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px;">
+                        <span style="font-weight: 800; color: var(--gold-light); font-size: 13px;">مكونات التركيبة (الزيوت العطرية بالجرام):</span>
+                        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; margin-top: 8px;">
+                            <select id="mix-oil-select">
+                                <option value="">-- اختر زيت عطري --</option>
+                            </select>
+                            <input id="mix-oil-grams" type="number" step="any" min="0.000001" placeholder="الجرامات">
+                            <button type="button" class="btn secondary" onclick="addOilToMixBuilder()" style="padding: 0 14px;">+ إضافة</button>
+                        </div>
+                        <div id="mix-oils-list" style="margin-top: 8px;"></div>
+                    </div>
+
+                    <label style="grid-column: span 2;">سعر بيع التركيبة (ج.م)
+                        <input id="mix-sale-price" type="number" step="any" min="0" placeholder="0.00">
+                    </label>
+
+                    <button type="button" class="btn primary" onclick="addMixToCart()" style="grid-column: span 2; height: 40px;">
+                        🧪 إضافة التركيبة الفورية للسلة
+                    </button>
+                </div>
+
+                <!-- Tab 4: Offers -->
+                <div id="panel-offer" class="grid-form" style="display: none;">
+                    <label style="grid-column: span 2;">اختر العرض الترويجي
+                        <select id="add-offer-select">
+                            <option value="">-- اختر عرضاً --</option>
+                        </select>
+                    </label>
+                    <label>الكمية
+                        <input id="add-offer-qty" type="number" step="1" min="1" value="1">
+                    </label>
+                    <label>سعر الباكدج بعد الخصم
+                        <input id="add-offer-price" type="number" step="any" min="0" placeholder="افتراضي">
+                    </label>
+                    <button type="button" class="btn primary" onclick="addOfferFromForm()" style="grid-column: span 2; height: 40px;">
+                        🎁 إضافة العرض للسلة
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cart Table Panel -->
+            <div class="panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid var(--line); padding-bottom: 8px; margin-bottom: 12px;">
+                    <h3 style="font-size: 15px; color: var(--gold-light);">🛒 سلة المبيعات الحالية</h3>
+                    <button type="button" class="btn danger" onclick="cart=[]; renderCart();" style="padding: 4px 10px; font-size: 11.5px;">
+                        🗑️ إفراغ السلة
+                    </button>
+                </div>
+
+                <div class="cart-table-wrapper">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الصنف</th>
+                                <th style="width: 90px; text-align: center;">الكمية</th>
+                                <th style="width: 90px; text-align: center;">السعر</th>
+                                <th style="width: 100px; text-align: center;">الخصم</th>
+                                <th style="width: 110px; text-align: left;">الإجمالي</th>
+                                <th style="width: 40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cart-tbody">
+                            <tr>
+                                <td colspan="6" class="muted" style="text-align: center; padding: 30px; color: var(--ink-muted);">السلة فارغة. قم باختيار صنف أو مسح الباركود بالأعلى.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Checkout Panel -->
+        <div class="pos-side-panel">
+            <div class="panel checkout-panel">
+                <h3 style="border-bottom: 1.5px solid var(--line); padding-bottom: 8px; margin-bottom: 14px; font-size: 16px; color: var(--gold-light);">
+                    💵 إغلاق الحساب والدفع
+                </h3>
+
+                <div style="display: grid; gap: 12px;">
+                    <!-- Customer Selector -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="margin: 0;">العميل</label>
+                            <button type="button" class="btn secondary" onclick="openNewCustomerModal()" style="padding: 2px 8px; font-size: 11.5px; border-radius: 6px;">
+                                + عميل جديد
+                            </button>
+                        </div>
+                        <select id="customer_id_select">
+                            <option value="">زبون عابر (نقدي)</option>
+                        </select>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <label>طريقة الدفع
+                        <select id="payment_method_select">
+                            <option value="cash">كاش (نقداً)</option>
+                            <option value="instapay">إنستا باي (InstaPay)</option>
+                            <option value="vodafone_cash">فودافون كاش</option>
+                        </select>
+                    </label>
+
+                    <!-- Invoice Discount -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
+                        <label>خصم إضافي للفاتورة
+                            <select id="invoice_discount_type" onchange="updateTotals()">
+                                <option value="">بدون خصم</option>
+                                <option value="amount">مبلغ ثابت</option>
+                                <option value="percent">نسبة مئوية %</option>
+                            </select>
+                        </label>
+                        <label>قيمة الخصم
+                            <input id="invoice_discount_value" type="number" step="any" min="0" placeholder="0" oninput="updateTotals()">
+                        </label>
+                    </div>
+
+                    <label>ملاحظة الفاتورة
+                        <textarea id="invoice_notes" placeholder="ملاحظات اختيارية..." style="min-height: 40px; border-radius: 8px;"></textarea>
+                    </label>
+
+                    <label>اسم مقفل الأوردر (اختياري)
+                        <input id="packer_name_input" type="text" placeholder="اسم الكاشير أو مقفل الفاتورة...">
+                    </label>
+
+                    <!-- Receipt Summary -->
+                    <div class="receipt-summary">
+                        <div class="receipt-row">
+                            <span>إجمالي الأصناف:</span>
+                            <strong id="lbl-subtotal">0.00 ج.م</strong>
+                        </div>
+                        <div class="receipt-row" style="color: var(--danger);">
+                            <span>خصم الفاتورة:</span>
+                            <strong id="lbl-discount">0.00 ج.م</strong>
+                        </div>
+                        <div class="receipt-row total">
+                            <span>المطلوب دفعه:</span>
+                            <strong id="lbl-total">0.00 ج.م</strong>
+                        </div>
+
+                        <label style="margin-top: 6px; font-weight: 800; color: var(--ink);">المبلغ المدفوع (ج.م)
+                            <input id="paid_total_input" type="number" step="any" min="0" placeholder="0.00" oninput="this.dataset.autoFilled='false'; updateTotals();" style="padding: 10px; font-size: 16px; font-weight: 900; text-align: center; border-color: var(--gold);">
+                        </label>
+
+                        <div class="receipt-row" style="border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 4px;">
+                            <span>متبقي (دين على العميل):</span>
+                            <strong id="lbl-due" style="color: var(--danger);">0.00 ج.م</strong>
+                        </div>
+                        <div class="receipt-row">
+                            <span>الفكة (المتبقي للعميل):</span>
+                            <strong id="lbl-change" style="color: var(--success);">0.00 ج.م</strong>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-checkout" onclick="processCheckout()">
+                        🖨️ إغلاق الفاتورة وطباعة الإيصال
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Quick Add Customer -->
+    <div id="modal-new-customer" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>+ تسجيل عميل جديد (يعمل أوفلاين)</h3>
+                <button type="button" onclick="closeNewCustomerModal()" style="background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; gap: 12px;">
+                    <label>اسم العميل *
+                        <input type="text" id="new-cust-name" placeholder="الاسم ثلاثي أو ثنائي...">
+                    </label>
+                    <label>رقم الهاتف
+                        <input type="tel" id="new-cust-phone" placeholder="01xxxxxxxxx">
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" onclick="closeNewCustomerModal()">إلغاء</button>
+                <button type="button" class="btn primary" onclick="saveNewCustomer()">حفظ العميل</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Settings -->
+    <div id="modal-settings" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ إعدادات الربط السحابي والطباعة</h3>
+                <button type="button" onclick="closeSettingsModal()" style="background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: grid; gap: 14px;">
+                    <label>رابط السيرفر السحابي (Cloud ERP URL)
+                        <input type="url" id="settings-server-url" value="https://erp1.hamzaforperfumes.com" placeholder="https://erp1.hamzaforperfumes.com">
+                    </label>
+                    <div style="background: rgba(201, 168, 76, 0.08); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 12.5px;">
+                        <span style="font-weight: 800; color: var(--gold-light);">💡 كيف تعمل المزامنة:</span>
+                        <ul style="margin-right: 18px; margin-top: 6px; line-height: 1.8; color: var(--ink-muted);">
+                            <li>البرنامج يحفظ كل الفواتير محلياً في جهاز الكمبيوتر فورياً وبدون تأخير.</li>
+                            <li>عند توفر الإنترنت، يقوم البرنامج تلقائياً بإرسال الفواتير للسيرفر السحابي وتحديث المخزون.</li>
+                            <li>يمكنك الضغط على زر "مزامنة الآن" في أي وقت لسحب أحدث الأسعار والمنتجات.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn secondary" onclick="closeSettingsModal()">إغلاق</button>
+                <button type="button" class="btn primary" onclick="saveSettingsFromModal()">حفظ ومزامنة فورية</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Container for Thermal Printing -->
+    <div id="thermal-receipt" style="display: none;"></div>
+
+    <!-- Scripts -->
+    <script src="db.js"></script>
+    <script src="sync.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>

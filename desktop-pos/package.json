@@ -1,0 +1,16 @@
+{
+  "name": "hamza-perfumes-pos",
+  "version": "1.0.0",
+  "description": "Hamza for Perfumes - Offline POS Desktop Application with Cloud Sync",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "author": "Hamza for Perfumes",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^29.0.0"
+  }
+}

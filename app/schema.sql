@@ -669,4 +669,18 @@ CREATE TABLE IF NOT EXISTS customer_followup_logs (
   INDEX idx_cust_followup_log (customer_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS offline_sync_invoices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  offline_uuid VARCHAR(64) UNIQUE NOT NULL,
+  invoice_id INT NOT NULL,
+  location_id INT NOT NULL,
+  synced_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  offline_created_at DATETIME NULL,
+  raw_payload LONGTEXT NULL,
+  INDEX idx_offline_uuid (offline_uuid),
+  INDEX idx_invoice_id (invoice_id),
+  INDEX idx_location_id (location_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 

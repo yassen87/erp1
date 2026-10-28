@@ -1,0 +1,556 @@
+/* ===== حمزة للعطور — استايل الكاشير الأوفلاين (Desktop POS) ===== */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+:root {
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --gold-dark: #9E7A2A;
+    --gold-soft: rgba(201, 168, 76, 0.12);
+    --gold-soft2: rgba(201, 168, 76, 0.22);
+    --bg-dark: #120D0B;
+    --surface: #1E1714;
+    --surface-soft: #281F1B;
+    --surface-input: #17110F;
+    --line: rgba(201, 168, 76, 0.25);
+    --line-light: rgba(255, 255, 255, 0.08);
+    --ink: #FAF6EF;
+    --ink-muted: #B8ADA7;
+    --primary: #C9A84C;
+    --danger: #EF4444;
+    --danger-soft: rgba(239, 68, 68, 0.15);
+    --success: #10B981;
+    --success-soft: rgba(16, 185, 129, 0.15);
+    --warning: #F59E0B;
+    --font: 'Cairo', system-ui, -apple-system, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font);
+}
+
+body {
+    background: var(--bg-dark);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    user-select: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--gold-dark);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
+}
+
+/* Header */
+.pos-header {
+    background: linear-gradient(180deg, #221915 0%, #17110F 100%);
+    border-bottom: 2px solid var(--gold-soft2);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo {
+    height: 44px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(201, 168, 76, 0.4));
+}
+
+.brand-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--gold-light);
+    letter-spacing: 0.5px;
+}
+
+.brand-subtitle {
+    font-size: 11px;
+    color: var(--ink-muted);
+}
+
+/* Status Badge */
+.sync-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-soft);
+    border: 1.5px solid var(--line);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sync-status-badge.online {
+    border-color: rgba(16, 185, 129, 0.5);
+    background: rgba(16, 185, 129, 0.1);
+    color: #34D399;
+}
+
+.sync-status-badge.offline {
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.1);
+    color: #FBBF24;
+}
+
+.sync-status-badge.syncing {
+    border-color: rgba(201, 168, 76, 0.5);
+    background: var(--gold-soft);
+    color: var(--gold-light);
+}
+
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.sync-status-badge.online .status-dot {
+    background: #10B981;
+    box-shadow: 0 0 8px #10B981;
+}
+
+.sync-status-badge.offline .status-dot {
+    background: #F59E0B;
+    box-shadow: 0 0 8px #F59E0B;
+}
+
+.sync-status-badge.syncing .status-dot {
+    background: var(--gold);
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0.6; }
+    100% { transform: scale(1.3); opacity: 1; }
+}
+
+/* Header Controls */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-icon {
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    color: var(--gold-light);
+}
+
+/* Main Layout */
+.pos-layout {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr;
+    gap: 20px;
+    padding: 20px;
+    flex: 1;
+}
+
+@media (max-width: 1100px) {
+    .pos-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Panels */
+.panel {
+    background: var(--surface);
+    border: 1.5px solid var(--line);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.4);
+    margin-bottom: 20px;
+}
+
+/* Barcode Scanner Bar */
+.barcode-box {
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.15), rgba(20, 15, 13, 0.95));
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 18px rgba(201, 168, 76, 0.15);
+}
+
+.barcode-input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.barcode-input-wrapper input {
+    width: 100%;
+    background: #000;
+    border: 1.5px solid var(--gold);
+    border-radius: 10px;
+    color: #fff;
+    padding: 11px 16px 11px 40px;
+    font-size: 16px;
+    font-weight: 700;
+    outline: none;
+    letter-spacing: 1px;
+}
+
+.barcode-input-wrapper input:focus {
+    box-shadow: 0 0 14px rgba(201, 168, 76, 0.6);
+}
+
+.barcode-input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+}
+
+/* Branch Bar */
+.branch-bar {
+    background: var(--surface-soft);
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.branch-select {
+    background: #000;
+    border: 1.5px solid var(--gold);
+    color: var(--gold-light);
+    font-size: 14px;
+    font-weight: 800;
+    padding: 6px 14px;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* Tabs */
+.tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab-btn {
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    color: var(--ink-muted);
+    padding: 10px 6px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--gold-soft);
+    color: var(--ink);
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border-color: var(--gold);
+    color: #000;
+    font-weight: 900;
+    box-shadow: 0 3px 12px rgba(201, 168, 76, 0.3);
+}
+
+/* Forms & Inputs */
+.grid-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-muted);
+}
+
+input, select, textarea {
+    background: var(--surface-input);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--ink);
+    font-size: 13.5px;
+    outline: none;
+    transition: border 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px rgba(201, 168, 76, 0.25);
+}
+
+/* Buttons */
+.btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: #000;
+}
+
+.btn.primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 15px rgba(201, 168, 76, 0.35);
+}
+
+.btn.secondary {
+    background: var(--surface-soft);
+    border: 1px solid var(--line);
+    color: var(--ink);
+}
+
+.btn.secondary:hover {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+}
+
+.btn.danger {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #EF4444;
+}
+
+.btn.danger:hover {
+    background: #EF4444;
+    color: #fff;
+}
+
+/* Cart Table */
+.cart-table-wrapper {
+    overflow-x: auto;
+    margin-top: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line-light);
+}
+
+.cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.cart-table th {
+    background: var(--surface-soft);
+    color: var(--gold-light);
+    padding: 10px 12px;
+    text-align: right;
+    font-weight: 800;
+    border-bottom: 1px solid var(--line);
+}
+
+.cart-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-light);
+    vertical-align: middle;
+}
+
+.cart-table tr:hover td {
+    background: rgba(201, 168, 76, 0.04);
+}
+
+/* Checkout Panel */
+.checkout-panel {
+    position: sticky;
+    top: 76px;
+    border-top: 4px solid var(--gold);
+}
+
+.receipt-summary {
+    background: var(--surface-input);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--ink-muted);
+}
+
+.receipt-row.total {
+    border-top: 1.5px dashed var(--line);
+    padding-top: 10px;
+    margin-top: 6px;
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--gold-light);
+}
+
+.receipt-row.total strong {
+    font-size: 20px;
+    color: var(--gold);
+}
+
+.btn-checkout {
+    width: 100%;
+    margin-top: 14px;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+    color: #000;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(201, 168, 76, 0.35);
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-checkout:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(201, 168, 76, 0.5);
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: var(--surface);
+    border: 2px solid var(--gold);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 580px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, rgba(201, 168, 76, 0.2), #1E1714);
+    border-bottom: 1.5px solid var(--line);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    color: var(--gold-light);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    background: var(--surface-soft);
+    border-top: 1px solid var(--line);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Thermal 80mm Print Styling */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #thermal-receipt, #thermal-receipt * {
+        visibility: visible;
+    }
+    #thermal-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76mm;
+        margin: 0;
+        padding: 5mm;
+        font-family: 'Cairo', monospace, sans-serif;
+        color: #000;
+        background: #fff;
+    }
+}
