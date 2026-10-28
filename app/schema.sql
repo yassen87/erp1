@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   id INT AUTO_INCREMENT PRIMARY KEY,
   location_id INT NOT NULL,
   product_id INT NOT NULL,
-  movement_type ENUM('initial','sale','manual_adjustment','transfer_future','transfer_adjust','return_future') NOT NULL,
+  movement_type VARCHAR(50) NOT NULL DEFAULT 'manual_adjustment',
   quantity_delta DECIMAL(18,6) NOT NULL,
   unit_cost DECIMAL(12,2) NULL,
   reference_type VARCHAR(40) NULL,

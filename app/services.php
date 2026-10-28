@@ -1157,8 +1157,17 @@ function move_inventory(PDO $db, int $locationId, int $productId, float $delta, 
         $stmt->execute([$newQuantity, $locationId, $productId]);
     }
 
-    $stmt = $db->prepare('INSERT INTO inventory_movements (location_id, product_id, movement_type, quantity_delta, reference_type, reference_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-    $stmt->execute([$locationId, $productId, $type, $delta, $referenceType, $referenceId, $notes, $userId]);
+    try {
+        $stmt = $db->prepare('INSERT INTO inventory_movements (location_id, product_id, movement_type, quantity_delta, reference_type, reference_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$locationId, $productId, $type, $delta, $referenceType, $referenceId, $notes, $userId]);
+    } catch (Throwable $moveErr) {
+        if (str_contains($moveErr->getMessage(), 'movement_type') || str_contains($moveErr->getMessage(), '1265')) {
+            $stmt = $db->prepare('INSERT INTO inventory_movements (location_id, product_id, movement_type, quantity_delta, reference_type, reference_id, notes, created_by) VALUES (?, ?, "manual_adjustment", ?, ?, ?, ?, ?)');
+            $stmt->execute([$locationId, $productId, $delta, $referenceType, $referenceId, ($notes ? $notes . ' [' . $type . ']' : $type), $userId]);
+        } else {
+            throw $moveErr;
+        }
+    }
 }
 
 function adjust_inventory(int $locationId, int $productId, float $delta, int $userId, string $notes): void
