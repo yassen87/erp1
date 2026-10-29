@@ -1233,15 +1233,24 @@ function customer_rows(array $filters = [], ?int $locationId = null): array
     }
 
     $dateFrom = trim((string) ($filters['date_from'] ?? ''));
-    if ($dateFrom !== '') {
-        $sql .= ' AND c.created_at >= ?';
-        $params[] = $dateFrom . ' 00:00:00';
-    }
-
     $dateTo = trim((string) ($filters['date_to'] ?? ''));
-    if ($dateTo !== '') {
-        $sql .= ' AND c.created_at <= ?';
-        $params[] = $dateTo . ' 23:59:59';
+
+    // عند البحث باسم أو هاتف العميل، لا يتم تقييد البحث بالتواريخ لضمان العثور على العميل فوراً
+    // وإذا لم يكن هناك بحث، يتم تطبيق التاريخ مع تصحيح الترتيب تلقائياً لو تم إدخال تاريخ بداية أكبر من النهاية
+    if ($search === '') {
+        if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+            $temp = $dateFrom;
+            $dateFrom = $dateTo;
+            $dateTo = $temp;
+        }
+        if ($dateFrom !== '') {
+            $sql .= ' AND c.created_at >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo !== '') {
+            $sql .= ' AND c.created_at <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
     }
 
     if ($locationId !== null) {
@@ -1249,7 +1258,8 @@ function customer_rows(array $filters = [], ?int $locationId = null): array
         $params[] = $locationId;
     } else {
         $filterLocationId = (int) ($filters['location_id'] ?? 0);
-        if ($filterLocationId > 0) {
+        // عند البحث باسم أو هاتف عميل، يتم البحث في كل الفروع ما لم يكن بحثاً عاماً بدون نص
+        if ($filterLocationId > 0 && $search === '') {
             $sql .= ' AND ' . $effectiveLocation . ' = ?';
             $params[] = $filterLocationId;
         }
@@ -5722,18 +5732,26 @@ function debts_rows(?int $locationId = null, array $filters = []): array
             LEFT JOIN invoices i ON i.id = d.invoice_id
             LEFT JOIN locations l ON l.id = COALESCE(d.location_id, i.location_id)
             WHERE d.status = 'open'";
-    $params = [];
-
+    $search = trim((string) ($filters['q'] ?? ''));
+    $customerId = (int) ($filters['customer_id'] ?? 0);
     $dateFrom = trim((string) ($filters['date_from'] ?? ''));
-    if ($dateFrom !== '') {
-        $sql .= ' AND COALESCE(i.created_at, d.created_at) >= ?';
-        $params[] = $dateFrom . ' 00:00:00';
-    }
-
     $dateTo = trim((string) ($filters['date_to'] ?? ''));
-    if ($dateTo !== '') {
-        $sql .= ' AND COALESCE(i.created_at, d.created_at) <= ?';
-        $params[] = $dateTo . ' 23:59:59';
+
+    // عند البحث باسم/هاتف العميل أو اختياره مباشرة، لا يتم التقييد بالتواريخ
+    if ($search === '' && $customerId <= 0) {
+        if ($dateFrom !== '' && $dateTo !== '' && $dateFrom > $dateTo) {
+            $temp = $dateFrom;
+            $dateFrom = $dateTo;
+            $dateTo = $temp;
+        }
+        if ($dateFrom !== '') {
+            $sql .= ' AND COALESCE(i.created_at, d.created_at) >= ?';
+            $params[] = $dateFrom . ' 00:00:00';
+        }
+        if ($dateTo !== '') {
+            $sql .= ' AND COALESCE(i.created_at, d.created_at) <= ?';
+            $params[] = $dateTo . ' 23:59:59';
+        }
     }
 
     if ($locationId !== null) {
@@ -5741,7 +5759,7 @@ function debts_rows(?int $locationId = null, array $filters = []): array
         $params[] = $locationId;
     } else {
         $filterLocationId = (int) ($filters['location_id'] ?? 0);
-        if ($filterLocationId > 0) {
+        if ($filterLocationId > 0 && $search === '' && $customerId <= 0) {
             $sql .= ' AND COALESCE(d.location_id, i.location_id) = ?';
             $params[] = $filterLocationId;
         }
