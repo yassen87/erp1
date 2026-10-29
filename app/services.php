@@ -166,7 +166,7 @@ function all_products(?string $type = null): array
         $sql .= ' AND p.type = ?';
         $params[] = $type;
     }
-    $sql .= ' ORDER BY p.created_at DESC, p.id DESC';
+    $sql .= ' ORDER BY p.name ASC';
     $stmt = pdo()->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();
@@ -195,7 +195,7 @@ function all_products_with_stock(?int $locationId = null, ?string $type = null, 
     if ($onlyInitialized) {
         $sql .= ' AND ib.id IS NOT NULL';
     }
-    $sql .= ' ORDER BY p.created_at DESC, p.id DESC';
+    $sql .= ' ORDER BY p.name ASC';
     $stmt = pdo()->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();
@@ -241,7 +241,7 @@ function product_rows(array $filters = []): array
     } elseif (($filters['barcode_status'] ?? '') === 'without_barcode') {
         $sql .= " AND (p.barcode IS NULL OR p.barcode = '')";
     }
-    $sql .= ' ORDER BY p.created_at DESC, p.id DESC';
+    $sql .= ' ORDER BY p.name ASC';
     $stmt = pdo()->prepare($sql);
     $stmt->execute($params);
     return $stmt->fetchAll();
@@ -2149,7 +2149,7 @@ function replace_formula_defaults_for_bottle(array $data): void
 
 function saved_recipes(): array
 {
-    return pdo()->query('SELECT r.*, p.name AS bottle_name, b.size_ml FROM recipe_headers r JOIN products p ON p.id = r.bottle_product_id LEFT JOIN product_bottle_details b ON b.product_id = r.bottle_product_id WHERE r.is_active = 1 ORDER BY r.id DESC')->fetchAll();
+    return pdo()->query('SELECT r.*, p.name AS bottle_name, b.size_ml FROM recipe_headers r JOIN products p ON p.id = r.bottle_product_id LEFT JOIN product_bottle_details b ON b.product_id = r.bottle_product_id WHERE r.is_active = 1 ORDER BY r.name ASC')->fetchAll();
 }
 
 function recipe_components_for(int $recipeId): array

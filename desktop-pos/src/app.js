@@ -160,10 +160,10 @@ function updateSyncBadge(info) {
 
 // Reload Local Data from IndexedDB
 async function reloadLocalData() {
-    allProducts = await getAllFromStore('products');
-    allCustomers = await getAllFromStore('customers');
+    allProducts = (await getAllFromStore('products')).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+    allCustomers = (await getAllFromStore('customers')).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
     allOffers = await getAllFromStore('offers');
-    allRecipes = await getAllFromStore('recipes');
+    allRecipes = (await getAllFromStore('recipes')).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
     formulaDefaults = await getAllFromStore('formula_defaults');
 
     renderBranchSelector();
