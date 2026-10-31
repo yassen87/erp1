@@ -418,6 +418,30 @@ CREATE TABLE IF NOT EXISTS online_order_items (
   CONSTRAINT fk_online_item_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS invoice_shipping (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_id INT NOT NULL UNIQUE,
+  recipient_name VARCHAR(160) NOT NULL,
+  phone VARCHAR(40) NOT NULL,
+  phone2 VARCHAR(40) NULL,
+  governorate VARCHAR(100) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  street_address TEXT NOT NULL,
+  shipping_cost DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  cod_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+  shipping_status ENUM('preparing', 'shipped', 'delivered', 'returned', 'cancelled') NOT NULL DEFAULT 'preparing',
+  shipping_notes TEXT NULL,
+  tracking_number VARCHAR(100) NULL,
+  shipping_company VARCHAR(100) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_shipping_status (shipping_status),
+  INDEX idx_shipping_phone (phone),
+  INDEX idx_shipping_invoice (invoice_id),
+  CONSTRAINT fk_shipping_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,

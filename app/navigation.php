@@ -48,6 +48,9 @@ function nav_sections(): array
             'dir' => 'people',
             'items' => [
                 ['route' => 'customers', 'label' => 'العملاء'],
+                ['route' => 'online_pos', 'label' => 'كاشير أونلاين 🛵'],
+                ['route' => 'shipping_tracker', 'label' => 'تتبع الشحنات والباركود 📦'],
+                ['route' => 'shipping_waybill', 'label' => 'بوليصة الشحن', 'hidden' => true],
                 ['route' => 'customer_todo', 'label' => 'قائمة مهام ومتابعة العملاء 📋'],
                 ['route' => 'customers_debts', 'label' => 'الديون المفتوحة'],
                 ['route' => 'call_center', 'label' => 'الكول سنتر'],

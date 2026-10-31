@@ -467,6 +467,48 @@ function handle_ajax_requests(string $route): void
         exit;
     }
 
+    if ($route === 'api_shipping_scan') {
+        require_login();
+        header('Content-Type: application/json; charset=utf-8');
+        $barcode = trim((string)($_GET['barcode'] ?? $_POST['barcode'] ?? ''));
+        if ($barcode === '') {
+            echo json_encode(['success' => false, 'message' => 'الرجاء إدخال أو مسح الباركود']);
+            exit;
+        }
+        $order = find_shipping_order_by_barcode($barcode);
+        if (!$order) {
+            echo json_encode(['success' => false, 'message' => 'لم يتم العثور على أوردر أو بوليصة مطابقة لهذا الباركود (' . $barcode . ')']);
+            exit;
+        }
+        echo json_encode(['success' => true, 'order' => $order]);
+        exit;
+    }
+
+    if ($route === 'api_shipping_update_status') {
+        require_login();
+        header('Content-Type: application/json; charset=utf-8');
+        $user = current_user();
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true) ?: $_POST;
+
+        $invoiceId = (int)($data['invoice_id'] ?? 0);
+        $status = trim((string)($data['status'] ?? ''));
+        $notes = isset($data['notes']) ? trim((string)$data['notes']) : null;
+
+        if ($invoiceId <= 0 || $status === '') {
+            echo json_encode(['success' => false, 'message' => 'بيانات ناقصة']);
+            exit;
+        }
+
+        $ok = update_shipping_order_status($invoiceId, $status, $notes, $user ? (int)$user['id'] : null);
+        if ($ok) {
+            echo json_encode(['success' => true, 'message' => 'تم تحديث حالة الأوردر والشحن بنجاح']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'تعذر تحديث الحالة، تأكد من صحة البيانات']);
+        }
+        exit;
+    }
+
     if ($route === 'test_admin_alert_whatsapp') {
         $user = require_login();
         if (($user['role_code'] ?? '') !== 'admin') {
@@ -1273,6 +1315,22 @@ function handle_post(string $route, array $user): void
         // Redirect back to POS and request the client to open the printable invoice in a new window
         // also instruct client to clear the POS cart
         redirect('pos&print_invoice=' . $invoiceId . '&clear_cart=1');
+    }
+
+    if ($route === 'online_pos' && (has_permission('pos') || has_permission('customers_view'))) {
+        $invoiceId = create_invoice($_POST, $user);
+        $customerId = !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null;
+        save_invoice_shipping($invoiceId, $_POST, $customerId);
+
+        try {
+            send_invoice_whatsapp($invoiceId);
+        } catch (Throwable $waErr) {}
+        try {
+            schedule_invoice_satisfaction_survey($invoiceId);
+        } catch (Throwable $surveyErr) {}
+
+        flash('تم تسجيل أوردر الشحن وفاتورة رقم #' . $invoiceId . ' بنجاح وبوليصة الشحن جاهزة للطباعة.');
+        redirect('online_pos&print_waybill=' . $invoiceId . '&clear_cart=1');
     }
 
     if ($route === 'shifts' && has_permission('shifts')) {

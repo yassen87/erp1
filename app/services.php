@@ -2508,10 +2508,11 @@ function create_invoice(array $data, array $user): int
         $discountType = ($data['discount_type'] ?? '') ?: null;
         $discountValue = (float) ($data['discount_value'] ?? 0);
         $discountAmount = line_discount($subtotal, $discountType, $discountValue);
-        $total = $subtotal - $discountAmount;
+        $shippingCost = (float) ($data['shipping_cost'] ?? 0);
+        $total = max(0.0, $subtotal - $discountAmount + $shippingCost);
         $paid = min($total, (float) ($data['paid_total'] ?? 0));
         $due = $total - $paid;
-        $notes = $data['notes'] ?: '';
+        $notes = ($data['notes'] ?? '') ?: '';
         if (!empty($data['packer_name'])) {
             $notes .= ($notes ? "\n" : "") . "تم التقفيل بواسطة: " . trim($data['packer_name']);
         }
@@ -8033,3 +8034,278 @@ function toggle_offer_status(int $id, ?int $userId = null): bool
 
 
 
+
+
+// =========================================================================
+//                  خدمات الشحن وبوليصة كاشير أونلاين
+// =========================================================================
+
+/**
+ * حفظ أو تحديث بيانات الشحن والبوليصة لفاتورة
+ */
+function save_invoice_shipping(int $invoiceId, array $data, ?int $customerId = null): int
+{
+    ensure_schema_updates();
+    $db = pdo();
+
+    $recipientName = trim((string)($data['recipient_name'] ?? $data['customer_name'] ?? ''));
+    $phone         = trim((string)($data['shipping_phone'] ?? $data['phone'] ?? ''));
+    $phone2        = trim((string)($data['shipping_phone2'] ?? $data['phone2'] ?? ''));
+    $governorate   = trim((string)($data['shipping_governorate'] ?? $data['governorate'] ?? ''));
+    $city          = trim((string)($data['shipping_city'] ?? $data['city'] ?? ''));
+    $address       = trim((string)($data['shipping_address'] ?? $data['street_address'] ?? $data['address'] ?? ''));
+    $shippingCost  = (float)($data['shipping_cost'] ?? 0.0);
+    $codAmount     = isset($data['cod_amount']) ? (float)$data['cod_amount'] : (float)($data['due_total'] ?? 0.0);
+    $status        = in_array(($data['shipping_status'] ?? ''), ['preparing', 'shipped', 'delivered', 'returned', 'cancelled'], true)
+        ? (string)$data['shipping_status']
+        : 'preparing';
+    $notes         = trim((string)($data['shipping_notes'] ?? ''));
+    $trackingNum   = trim((string)($data['tracking_number'] ?? ''));
+    $company       = trim((string)($data['shipping_company'] ?? ''));
+
+    $stmt = $db->prepare("INSERT INTO invoice_shipping 
+        (invoice_id, recipient_name, phone, phone2, governorate, city, street_address, shipping_cost, cod_amount, shipping_status, shipping_notes, tracking_number, shipping_company)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            recipient_name = VALUES(recipient_name),
+            phone = VALUES(phone),
+            phone2 = VALUES(phone2),
+            governorate = VALUES(governorate),
+            city = VALUES(city),
+            street_address = VALUES(street_address),
+            shipping_cost = VALUES(shipping_cost),
+            cod_amount = VALUES(cod_amount),
+            shipping_status = VALUES(shipping_status),
+            shipping_notes = VALUES(shipping_notes),
+            tracking_number = VALUES(tracking_number),
+            shipping_company = VALUES(shipping_company)");
+
+    $stmt->execute([
+        $invoiceId,
+        $recipientName,
+        $phone,
+        $phone2 ?: null,
+        $governorate,
+        $city,
+        $address,
+        $shippingCost,
+        $codAmount,
+        $status,
+        $notes ?: null,
+        $trackingNum ?: null,
+        $company ?: null
+    ]);
+
+    // إذا كان العميل موجوداً، قم بتحديث بياناته أيضاً للاستخدام المستقبلي
+    if ($customerId && $customerId > 0) {
+        try {
+            $stmtCust = $db->prepare("UPDATE customers SET 
+                phone2 = COALESCE(NULLIF(?, ''), phone2),
+                governorate = COALESCE(NULLIF(?, ''), governorate),
+                city = COALESCE(NULLIF(?, ''), city),
+                address = COALESCE(NULLIF(?, ''), address)
+                WHERE id = ?");
+            $stmtCust->execute([$phone2, $governorate, $city, $address, $customerId]);
+        } catch (Throwable $e) {}
+    }
+
+    return (int)$db->lastInsertId();
+}
+
+/**
+ * جلب بيانات الشحن المرتبطة بفاتورة
+ */
+function find_invoice_shipping(int $invoiceId): ?array
+{
+    ensure_schema_updates();
+    $stmt = pdo()->prepare("SELECT * FROM invoice_shipping WHERE invoice_id = ? LIMIT 1");
+    $stmt->execute([$invoiceId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/**
+ * البحث عن أوردر وشحنة عبر الباركود أو رقم الفاتورة أو رقم الهاتف
+ */
+function find_shipping_order_by_barcode(string $query): ?array
+{
+    ensure_schema_updates();
+    $q = trim($query);
+    if ($q === '') {
+        return null;
+    }
+
+    $db = pdo();
+
+    // إزالة أية علامات نجمية أو مسافات قد تأتي من قارئ الباركود
+    $cleanCode = trim($q, "* \t\n\r\0\x0B");
+
+    $sql = "SELECT i.*, 
+                   s.id AS shipping_id, s.recipient_name, s.phone AS shipping_phone, s.phone2 AS shipping_phone2,
+                   s.governorate AS shipping_governorate, s.city AS shipping_city, s.street_address AS shipping_address,
+                   s.shipping_cost, s.cod_amount, s.shipping_status, s.shipping_notes, s.tracking_number, s.shipping_company,
+                   s.created_at AS shipping_created_at, s.updated_at AS shipping_updated_at,
+                   c.name AS customer_name, c.phone AS customer_phone,
+                   u.name AS user_name, l.name AS location_name
+            FROM invoices i
+            JOIN invoice_shipping s ON s.invoice_id = i.id
+            LEFT JOIN customers c ON c.id = i.customer_id
+            LEFT JOIN users u ON u.id = i.user_id
+            LEFT JOIN locations l ON l.id = i.location_id
+            WHERE i.invoice_number = ? 
+               OR i.invoice_number = ?
+               OR s.tracking_number = ?
+               OR CAST(i.id AS CHAR) = ?
+               OR s.phone = ?
+               OR s.phone2 = ?
+            ORDER BY i.id DESC LIMIT 1";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$q, $cleanCode, $cleanCode, $cleanCode, $cleanCode, $cleanCode]);
+    $invoice = $stmt->fetch();
+
+    if (!$invoice) {
+        // فحص ما إذا كان الفاتورة موجودة ولكن ليس لها شحن مسجل بعد
+        $stmtRaw = $db->prepare("SELECT i.*, c.name AS customer_name, c.phone AS customer_phone, u.name AS user_name, l.name AS location_name 
+            FROM invoices i 
+            LEFT JOIN customers c ON c.id = i.customer_id 
+            LEFT JOIN users u ON u.id = i.user_id 
+            LEFT JOIN locations l ON l.id = i.location_id 
+            WHERE i.invoice_number = ? OR CAST(i.id AS CHAR) = ? LIMIT 1");
+        $stmtRaw->execute([$q, $cleanCode]);
+        $rawInv = $stmtRaw->fetch();
+        if ($rawInv) {
+            $invoice = $rawInv;
+            $invoice['shipping_status'] = 'preparing';
+            $invoice['recipient_name'] = $rawInv['customer_name'] ?? 'عميل';
+            $invoice['shipping_phone'] = $rawInv['customer_phone'] ?? '';
+            $invoice['shipping_phone2'] = '';
+            $invoice['shipping_governorate'] = '';
+            $invoice['shipping_city'] = '';
+            $invoice['shipping_address'] = '';
+            $invoice['shipping_cost'] = 0.0;
+            $invoice['cod_amount'] = (float)$rawInv['due_total'];
+            $invoice['shipping_notes'] = '';
+        } else {
+            return null;
+        }
+    }
+
+    // جلب بنود الفاتورة
+    $stmtLines = $db->prepare("SELECT l.*, p.name AS product_name, p.barcode AS product_barcode 
+                               FROM invoice_lines l 
+                               LEFT JOIN products p ON p.id = l.product_id 
+                               WHERE l.invoice_id = ?");
+    $stmtLines->execute([(int)$invoice['id']]);
+    $invoice['lines'] = $stmtLines->fetchAll();
+
+    return $invoice;
+}
+
+/**
+ * تحديث حالة الشحن والملاحظات لأوردر
+ */
+function update_shipping_order_status(int $invoiceId, string $status, ?string $notes = null, ?int $userId = null): bool
+{
+    ensure_schema_updates();
+    $valid = ['preparing', 'shipped', 'delivered', 'returned', 'cancelled'];
+    if (!in_array($status, $valid, true)) {
+        return false;
+    }
+
+    $db = pdo();
+
+    // تأكد من وجود سجل الشحن
+    $existing = find_invoice_shipping($invoiceId);
+    if (!$existing) {
+        $inv = find_invoice($invoiceId);
+        if (!$inv) {
+            return false;
+        }
+        save_invoice_shipping($invoiceId, [
+            'customer_name' => $inv['customer_name'] ?? 'عميل',
+            'phone' => $inv['customer_phone'] ?? '',
+            'due_total' => $inv['due_total'],
+            'shipping_status' => $status,
+            'shipping_notes' => $notes
+        ]);
+        return true;
+    }
+
+    $sql = "UPDATE invoice_shipping SET shipping_status = ?";
+    $params = [$status];
+
+    if ($notes !== null) {
+        $sql .= ", shipping_notes = ?";
+        $params[] = $notes;
+    }
+
+    $sql .= " WHERE invoice_id = ?";
+    $params[] = $invoiceId;
+
+    $stmt = $db->prepare($sql);
+    $res = $stmt->execute($params);
+
+    $statusLabels = shipping_status_labels();
+    $label = $statusLabels[$status]['label'] ?? $status;
+    log_audit($userId, 'update', 'shipping', $invoiceId, "تحديث حالة شحن الفاتورة #{$invoiceId} إلى: {$label}");
+
+    return $res;
+}
+
+/**
+ * جلب جميع أوردرات وشحنات الأونلاين مع الفلاتر
+ */
+function all_shipping_orders(array $filters = [], int $limit = 100): array
+{
+    ensure_schema_updates();
+    $db = pdo();
+
+    $where = [];
+    $params = [];
+
+    if (!empty($filters['status']) && $filters['status'] !== 'all') {
+        $where[] = "s.shipping_status = ?";
+        $params[] = $filters['status'];
+    }
+
+    if (!empty($filters['governorate'])) {
+        $where[] = "s.governorate = ?";
+        $params[] = $filters['governorate'];
+    }
+
+    if (!empty($filters['search'])) {
+        $kw = '%' . trim($filters['search']) . '%';
+        $where[] = "(i.invoice_number LIKE ? OR s.recipient_name LIKE ? OR s.phone LIKE ? OR s.phone2 LIKE ? OR s.city LIKE ? OR s.street_address LIKE ?)";
+        $params = array_merge($params, [$kw, $kw, $kw, $kw, $kw, $kw]);
+    }
+
+    if (!empty($filters['date_from'])) {
+        $where[] = "DATE(i.created_at) >= ?";
+        $params[] = $filters['date_from'];
+    }
+
+    if (!empty($filters['date_to'])) {
+        $where[] = "DATE(i.created_at) <= ?";
+        $params[] = $filters['date_to'];
+    }
+
+    $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+    $sql = "SELECT i.id, i.invoice_number, i.total, i.paid_total, i.due_total, i.created_at,
+                   s.recipient_name, s.phone, s.phone2, s.governorate, s.city, s.street_address,
+                   s.shipping_cost, s.cod_amount, s.shipping_status, s.shipping_notes, s.tracking_number,
+                   c.name AS customer_name, c.phone AS customer_phone,
+                   u.name AS user_name, l.name AS location_name
+            FROM invoice_shipping s
+            JOIN invoices i ON i.id = s.invoice_id
+            LEFT JOIN customers c ON c.id = i.customer_id
+            LEFT JOIN users u ON u.id = i.user_id
+            LEFT JOIN locations l ON l.id = i.location_id
+            {$whereSql}
+            ORDER BY i.id DESC LIMIT {$limit}";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}

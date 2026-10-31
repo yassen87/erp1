@@ -450,3 +450,129 @@ function clean_dial_phone(?string $phone): string
     return preg_replace('/[^\d+]/', '', (string)$phone);
 }
 
+/**
+ * قائمة محافظات جمهورية مصر العربية الـ 27
+ */
+function egypt_governorates(): array
+{
+    return [
+        'القاهرة',
+        'الجيزة',
+        'الإسكندرية',
+        'القليوبية',
+        'الغربية',
+        'الشرقية',
+        'الدقهلية',
+        'المنوفية',
+        'كفر الشيخ',
+        'البحيرة',
+        'دمياط',
+        'بورسعيد',
+        'الإسماعيلية',
+        'السويس',
+        'الفيوم',
+        'بني سويف',
+        'المنيا',
+        'أسيوط',
+        'سوهاج',
+        'قنا',
+        'الأقصر',
+        'أسوان',
+        'البحر الأحمر',
+        'الوادي الجديد',
+        'مطروح',
+        'شمال سيناء',
+        'جنوب سيناء',
+    ];
+}
+
+/**
+ * تسميات وحالات شحن الأوردرات
+ */
+function shipping_status_labels(): array
+{
+    return [
+        'preparing' => ['label' => 'قيد التجهيز', 'badge' => 'warning', 'icon' => '⏳'],
+        'shipped'   => ['label' => 'تم الشحن مع المندوب', 'badge' => 'info', 'icon' => '🚚'],
+        'delivered' => ['label' => 'تم التسليم بنجاح', 'badge' => 'success', 'icon' => '✅'],
+        'returned'  => ['label' => 'مرتجع', 'badge' => 'danger', 'icon' => '❌'],
+        'cancelled' => ['label' => 'ملغي', 'badge' => 'muted', 'icon' => '🚫'],
+    ];
+}
+
+/**
+ * توليد باركود Code 39 بصيغة SVG فائقة الدقة والوضوح (100% Offline)
+ */
+function draw_barcode_svg(string $barcode, float $totalH = 46.0, float $textH = 11.0, float $narrow = 1.35): string
+{
+    $barcode = strtoupper(trim($barcode));
+    if ($barcode === '') {
+        return '';
+    }
+
+    $input = $barcode;
+    if (substr($input, 0, 1) !== '*') {
+        $input = '*' . $input;
+    }
+    if (substr($input, -1) !== '*') {
+        $input = $input . '*';
+    }
+
+    $code39_map = [
+        '0' => 'nnnwwnwnn', '1' => 'wnnwnnnnw', '2' => 'nnwwnnnnw', '3' => 'wnwwnnnnn',
+        '4' => 'nnnwwnnnw', '5' => 'wnnwwnnnn', '6' => 'nnwwwnnnn', '7' => 'nnnwnnwnw',
+        '8' => 'wnnwnnwnn', '9' => 'nnwwnnwnn', 'A' => 'wnnnnwnnw', 'B' => 'nnwnnwnnw',
+        'C' => 'wnwnnwnnn', 'D' => 'nnnnwwnnw', 'E' => 'wnnnwwnnn', 'F' => 'nnwnwwnnn',
+        'G' => 'nnnnnwwnw', 'H' => 'wnnnnwwnn', 'I' => 'nnwnnwwnn', 'J' => 'nnnnwwwnn',
+        'K' => 'wnnnnnnww', 'L' => 'nnwnnnnww', 'M' => 'wnwnnnnwn', 'N' => 'nnnnwnnww',
+        'O' => 'wnnnwnnwn', 'P' => 'nnwnwnnwn', 'Q' => 'nnnnnnwww', 'R' => 'wnnnnnwwn',
+        'S' => 'nnwnnnwwn', 'T' => 'nnnnwnwwn', 'U' => 'wwnnnnnnw', 'V' => 'nwwnnnnnw',
+        'W' => 'wwwnnnnnn', 'X' => 'nwnnwnnnw', 'Y' => 'wwnnwnnnn', 'Z' => 'nwwnwnnnn',
+        '-' => 'nwnnnnwnw', '.' => 'wwnnnnwnn', ' ' => 'nwwnnnwnn', '$' => 'nwnwnwnnn',
+        '/' => 'nwnwnnnwn', '+' => 'nwnnnwnwn', '%' => 'nnnwnwnwn', '*' => 'nwnnwnwnn'
+    ];
+
+    $wide = $narrow * 2.5;
+    $gap  = $narrow;
+    $barH = $totalH - $textH;
+
+    $rects = [];
+    $x = 8.0;
+
+    for ($i = 0; $i < strlen($input); $i++) {
+        $char = $input[$i];
+        if (!isset($code39_map[$char])) {
+            continue;
+        }
+
+        $pattern = $code39_map[$char];
+        for ($j = 0; $j < 9; $j++) {
+            $w = ($pattern[$j] === 'w') ? $wide : $narrow;
+            if ($j % 2 === 0) {
+                $rects[] = sprintf('<rect x="%.2f" y="0" width="%.2f" height="%.2f" fill="#000000" />', $x, $w, $barH);
+            }
+            $x += $w;
+        }
+        $x += $gap;
+    }
+
+    $totalWidth = $x + 8.0;
+    $textY    = $totalH - 1.5;
+    $textX    = $totalWidth / 2.0;
+    $fontSize = $textH * 0.75;
+
+    $svg  = sprintf(
+        '<svg viewBox="0 0 %.2f %.2f" width="100%%" height="100%%" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+        $totalWidth, $totalH
+    );
+    $svg .= sprintf('<rect x="0" y="%.2f" width="%.2f" height="%.2f" fill="#ffffff" />', $barH, $totalWidth, $textH);
+    $svg .= implode("\n", $rects);
+    $svg .= sprintf(
+        '<text x="%.2f" y="%.2f" text-anchor="middle" font-family="\'Courier New\', Courier, monospace" font-size="%.2f" font-weight="bold" fill="#000000" letter-spacing="2.0">%s</text>',
+        $textX, $textY, $fontSize, htmlspecialchars($barcode)
+    );
+    $svg .= '</svg>';
+
+    return $svg;
+}
+
