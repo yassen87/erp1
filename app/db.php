@@ -19,7 +19,10 @@ function pdo(bool $withDatabase = true): PDO
     ]);
     $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     if ($withDatabase) {
-        $pdo->exec("SET time_zone = '+03:00'");
+        // ضبط المنطقة الزمنية ديناميكياً لتطابق توقيت مصر (القاهرة): شتاءً (+02:00) وصيفاً (+03:00) تلقائياً
+        $cairoTz = new DateTimeZone('Africa/Cairo');
+        $cairoOffset = (new DateTime('now', $cairoTz))->format('P');
+        $pdo->exec("SET time_zone = '{$cairoOffset}'");
         $db = $pdo;
     } else {
         $server = $pdo;
@@ -161,6 +164,33 @@ function ensure_schema_updates(): void
     }
     try {
         $db->exec("ALTER TABLE payments MODIFY COLUMN method ENUM('cash','instapay','bank_transfer','vodafone_cash','salary_deduction','exchange_credit','customer_credit') NOT NULL DEFAULT 'cash'");
+    } catch (Throwable $e) {
+    }
+    // Migration: ضبط توقيت الفواتير وحركات يوم 30 أكتوبر 2026 بعد تطبيق التوقيت الشتوي في مصر (تأخير ساعة)
+    try {
+        $stmtDst = $db->query("SELECT setting_value FROM app_settings WHERE setting_key = 'dst_winter_time_2026_10_30_adjusted' LIMIT 1");
+        $dstAdjusted = $stmtDst ? $stmtDst->fetchColumn() : null;
+        if (!$dstAdjusted) {
+            $db->exec("UPDATE invoices SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            $db->exec("UPDATE payments SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            try {
+                $db->exec("UPDATE offline_sync_invoices SET synced_at = DATE_SUB(synced_at, INTERVAL 1 HOUR) WHERE synced_at >= '2026-10-30 00:00:00'");
+            } catch (Throwable $ex) {}
+            try {
+                $db->exec("UPDATE financial_ledger SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            } catch (Throwable $ex) {}
+            try {
+                $db->exec("UPDATE inventory_movements SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            } catch (Throwable $ex) {}
+            try {
+                $db->exec("UPDATE manager_collections SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            } catch (Throwable $ex) {}
+            try {
+                $db->exec("UPDATE branch_cash_transfers SET created_at = DATE_SUB(created_at, INTERVAL 1 HOUR) WHERE created_at >= '2026-10-30 00:00:00'");
+            } catch (Throwable $ex) {}
+
+            $db->exec("INSERT INTO app_settings (setting_key, setting_value) VALUES ('dst_winter_time_2026_10_30_adjusted', '1') ON DUPLICATE KEY UPDATE setting_value = '1'");
+        }
     } catch (Throwable $e) {
     }
     foreach ($updates as $sql) {

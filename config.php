@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+// ضبط المنطقة الزمنية تلقائياً على توقيت مصر (القاهرة)
+date_default_timezone_set('Africa/Cairo');
+
 const DB_HOST = '127.0.0.1';
 const DB_PORT = '3306';
 const DB_NAME = 'erp_local_db';

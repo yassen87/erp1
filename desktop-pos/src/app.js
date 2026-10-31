@@ -882,7 +882,7 @@ function printThermalReceipt(invoice, items) {
 }
 
 function generateReceiptHtml(inv, items) {
-    const dateFormatted = new Date(inv.created_at).toLocaleString('ar-EG');
+    const dateFormatted = new Date(inv.created_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
     const itemsRows = items.map(i => `
         <tr style="border-bottom: 1px dashed #ccc;">
             <td style="padding: 4px 0; font-size: 11px; text-align: right;">${i.name}</td>
