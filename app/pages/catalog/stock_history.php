@@ -1,16 +1,56 @@
 <?php
 $user = require_login();
 
-// إعداد الفلاتر العامة
-$activeTab = trim((string)($_GET['tab'] ?? 'matrix'));
+// إعداد الفلاتر العامة والبحث الذكي بالاسم أو الباركود
+$db = pdo();
+$activeTab = trim((string)($_GET['tab'] ?? ''));
 $selectedProductId = (int)($_GET['product_id'] ?? 0);
+$query = trim((string)($_GET['q'] ?? ''));
 
-if ($selectedProductId > 0 && empty($_GET['tab'])) {
-    $activeTab = 'timeline';
+$multipleMatches = [];
+$searched = ($query !== '');
+
+// إذا تم إدخال باركود أو اسم صنف في البحث ولم يتم تمرير معرف محدد
+if ($selectedProductId <= 0 && $query !== '') {
+    // 1. فحص تطابق تام مع الباركود
+    $stmt = $db->prepare("SELECT id FROM products WHERE barcode = ? AND is_active = 1 LIMIT 1");
+    $stmt->execute([$query]);
+    $matchedId = $stmt->fetchColumn();
+
+    // 2. فحص تطابق تام مع الاسم أو كود الصنف SKU
+    if (!$matchedId) {
+        $stmt = $db->prepare("SELECT id FROM products WHERE (name = ? OR sku = ?) AND is_active = 1 LIMIT 1");
+        $stmt->execute([$query, $query]);
+        $matchedId = $stmt->fetchColumn();
+    }
+
+    // 3. فحص تطابق مرن LIKE
+    if (!$matchedId) {
+        $kw = '%' . $query . '%';
+        $stmt = $db->prepare("SELECT p.id, p.name, p.barcode, p.type FROM products p WHERE (p.name LIKE ? OR p.barcode LIKE ? OR p.sku LIKE ?) AND p.is_active = 1 LIMIT 15");
+        $stmt->execute([$kw, $kw, $kw]);
+        $likeRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (count($likeRows) === 1) {
+            $matchedId = $likeRows[0]['id'];
+        } elseif (count($likeRows) > 1) {
+            $multipleMatches = $likeRows;
+        }
+    }
+
+    if ($matchedId) {
+        $selectedProductId = (int)$matchedId;
+        if ($activeTab === '') {
+            $activeTab = 'timeline';
+        }
+    }
+}
+
+if ($activeTab === '') {
+    $activeTab = ($selectedProductId > 0) ? 'timeline' : 'matrix';
 }
 
 $filters = [
-    'q'           => trim((string)($_GET['q'] ?? '')),
+    'q'           => $query,
     'type'        => trim((string)($_GET['type'] ?? 'all')),
     'status'      => trim((string)($_GET['status'] ?? 'all')),
     'location_id' => trim((string)($_GET['location_id'] ?? 'all')),
@@ -410,6 +450,61 @@ $productTypes = [
         </div>
     </section>
 
+    <!-- شريط البحث ومسح الباركود السريع بالاسم أو الباركود -->
+    <div class="search-panel no-print" style="background: var(--surface, #ffffff); border: 2px solid var(--primary, #b98418); border-radius: 14px; padding: 14px 18px; box-shadow: 0 4px 16px rgba(185, 132, 24, 0.08);">
+        <form method="get" action="index.php" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <input type="hidden" name="r" value="stock_history">
+            <?php if (!empty($_GET['tab'])): ?>
+                <input type="hidden" name="tab" value="<?= e($activeTab) ?>">
+            <?php endif; ?>
+
+            <span style="font-size: 24px; line-height: 1;" title="قارئ الباركود والبحث">📷</span>
+            <div style="flex:1; min-width: 280px; position:relative;">
+                <input type="text" name="q" id="stock-universal-search-input" value="<?= e($query) ?>" 
+                       list="stock-products-datalist" 
+                       placeholder="🔍 امسح الباركود بالسكانر أو اكتب اسم الصنف أو زيت المخزون ثم اضغط Enter..." 
+                       autocomplete="off" autofocus
+                       style="width: 100%; padding: 12px 18px; border: 1.5px solid var(--line, #cbd5e1); border-radius: 10px; font-size: 14.5px; font-weight: 700; color: var(--ink); outline: none; background: #fff;">
+            </div>
+
+            <button type="submit" class="btn primary" style="padding: 12px 24px; font-weight: 800; font-size: 14px; white-space: nowrap; border-radius:10px;">
+                🔎 بحث واستعلام
+            </button>
+            <?php if ($searched || $selectedProductId > 0): ?>
+                <a href="index.php?r=stock_history" class="btn" style="padding: 12px 16px; border-radius:10px;" title="مسح وتفريغ البحث">
+                    ✕ تفريغ
+                </a>
+            <?php endif; ?>
+        </form>
+    </div>
+
+    <!-- قائمة الاقتراحات التلقائية للمنتجات والباركود للبحث الفوري -->
+    <datalist id="stock-products-datalist">
+        <?php foreach ($allProducts as $ap): ?>
+            <option value="<?= e($ap['name']) ?>"><?= !empty($ap['barcode']) ? ' | باركود: ' . e($ap['barcode']) : '' ?></option>
+            <?php if (!empty($ap['barcode'])): ?>
+                <option value="<?= e($ap['barcode']) ?>"><?= e($ap['name']) ?></option>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </datalist>
+
+    <!-- تنبيه عند وجود عدة أصناف مطابقة للبحث -->
+    <?php if (!empty($multipleMatches)): ?>
+        <div class="no-print" style="background:#fffbeb; border:1.5px solid #f59e0b; border-radius:12px; padding:14px 18px; box-shadow:0 2px 6px rgba(245, 158, 11, 0.1);">
+            <div style="font-weight:800; font-size:13.5px; color:#92400e; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span>⚠️</span> يوجد أكثر من صنف يتطابق مع بحثك عن "<strong><?= e($query) ?></strong>". اضغط على الصنف المطلوب لعرض كشف حساب تجديده فوراً:
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <?php foreach ($multipleMatches as $m): ?>
+                    <a href="index.php?r=stock_history&tab=timeline&product_id=<?= (int)$m['id'] ?>" 
+                       class="btn small" style="background:#ffffff; border:1px solid #d97706; color:#92400e; font-weight:700; border-radius:8px; padding:6px 12px;">
+                        <?= e($m['name']) ?> <?= $m['barcode'] ? ' ('.e($m['barcode']).')' : '' ?> ⬅
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- بطاقات الإحصائيات العامة KPI -->
     <div class="stock-kpi-grid">
         <div class="stock-kpi-card">
@@ -493,7 +588,7 @@ $productTypes = [
                 <div class="stock-filter-grid">
                     <div class="stock-filter-field" style="grid-column: span 2; min-width: 240px;">
                         <label>بحث بالاسم أو الباركود أو الكود:</label>
-                        <input type="text" name="q" value="<?= e($filters['q']) ?>" placeholder="اكتب اسم الزيت أو الصنف أو امسح الباركود...">
+                        <input type="text" name="q" value="<?= e($filters['q']) ?>" list="stock-products-datalist" placeholder="اكتب اسم الزيت أو الصنف أو امسح الباركود..." autocomplete="off">
                     </div>
 
                     <div class="stock-filter-field">
@@ -726,13 +821,24 @@ $productTypes = [
                 <input type="hidden" name="r" value="stock_history">
                 <input type="hidden" name="tab" value="timeline">
 
-                <div class="stock-filter-field" style="flex:2; min-width:280px;">
-                    <label>اختر صنفاً أو زيتاً لمراجعة كافة حركاته وتاريخ تجديده:</label>
-                    <select name="product_id" onchange="this.form.submit()" required>
+                <div class="stock-filter-field" style="flex:2; min-width:260px;">
+                    <label>بحث بالاسم أو الباركود (مسح بالسكانر):</label>
+                    <div style="display:flex; gap:6px;">
+                        <input type="text" name="q" value="<?= e($query) ?>" 
+                               list="stock-products-datalist" 
+                               placeholder="اكتب الاسم أو امسح الباركود واضغط Enter..."
+                               autocomplete="off" style="flex:1;">
+                        <button type="submit" class="btn primary" style="padding:8px 14px;" title="بحث">🔎</button>
+                    </div>
+                </div>
+
+                <div class="stock-filter-field" style="flex:2; min-width:240px;">
+                    <label>أو اختر الصنف مباشرة من القائمة:</label>
+                    <select name="product_id" onchange="this.form.submit()">
                         <option value="">-- اضغط لاختيار الصنف من القائمة --</option>
                         <?php foreach ($allProducts as $p): ?>
                             <option value="<?= (int)$p['id'] ?>" <?= $selectedProductId === (int)$p['id'] ? 'selected' : '' ?>>
-                                <?= e($p['name']) ?> (<?= e($p['type'] === 'perfume_gram' ? '🌿 زيت بالجرام' : ($p['type'] === 'bottle' ? '🧴 زجاجة' : '📦 منتج')) ?>) <?= $p['barcode'] ? ' - ['.e($p['barcode']).']' : '' ?>
+                                <?= e($p['name']) ?> (<?= e($p['type'] === 'perfume_gram' ? '🌿 زيت' : ($p['type'] === 'bottle' ? '🧴 زجاجة' : '📦 منتج')) ?>) <?= $p['barcode'] ? ' - ['.e($p['barcode']).']' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -1142,3 +1248,4 @@ $productTypes = [
     <?php endif; ?>
 
 </div>
+
