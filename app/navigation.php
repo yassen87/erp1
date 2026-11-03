@@ -30,6 +30,7 @@ function nav_sections(): array
                 ['route' => 'formula_defaults',        'label' => 'إضافة روابط زجاجة', 'url' => 'index.php?r=formula_defaults&view=add'],
                 ['route' => 'inventory',               'label' => 'المخزن'],
                 ['route' => 'inventory_add',           'label' => 'إضافة مخزون مركزي'],
+                ['route' => 'stock_history',           'label' => 'مراقبة تجديد وإضافة المخزون ⏱️'],
                 ['route' => 'branch_inventory',        'label' => 'رصيد الفرع'],
                 ['route' => 'product_trace',           'label' => 'حركة ومبيعات صنف'],
                 ['route' => 'transfers_supply',        'label' => 'توريد (مخزن → فرع)'],

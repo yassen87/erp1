@@ -58,6 +58,7 @@ function has_permission(string $permission): bool
         'inventory'          => 'inventory_view',
         'branch_inventory'   => 'inventory_view',
         'product_trace'      => 'inventory_view',
+        'stock_history'      => 'inventory_view',
         'waste'              => 'inventory_view',
         'transfers_branch_create' => 'transfers_branch',
         'transfers_supply_create' => 'transfers_supply',

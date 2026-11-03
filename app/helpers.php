@@ -576,3 +576,95 @@ function draw_barcode_svg(string $barcode, float $totalH = 46.0, float $textH = 
     return $svg;
 }
 
+/**
+ * تحويل تاريخ ووقت إلى صياغة عربية ذكية سهلة القراءة للمدة المنقضية (منذ ساعتين، أمس، إلخ)
+ */
+function time_ago_ar(?string $datetime): string
+{
+    if (empty($datetime)) {
+        return 'لم يُسجل بعد';
+    }
+    $time = strtotime($datetime);
+    if (!$time) {
+        return '-';
+    }
+    $diff = time() - $time;
+    if ($diff < 0) {
+        $diff = 0;
+    }
+    if ($diff < 60) {
+        return 'الآن (منذ لحظات)';
+    }
+    $minutes = (int) floor($diff / 60);
+    if ($minutes < 60) {
+        if ($minutes === 1) return 'منذ دقيقة واحدة';
+        if ($minutes === 2) return 'منذ دقيقتين';
+        if ($minutes >= 3 && $minutes <= 10) return "منذ {$minutes} دقائق";
+        return "منذ {$minutes} دقيقة";
+    }
+    $hours = (int) floor($diff / 3600);
+    if ($hours < 24) {
+        if ($hours === 1) return 'منذ ساعة واحدة';
+        if ($hours === 2) return 'منذ ساعتين';
+        if ($hours >= 3 && $hours <= 10) return "منذ {$hours} ساعات";
+        return "منذ {$hours} ساعة";
+    }
+    $days = (int) floor($diff / 86400);
+    if ($days < 7) {
+        if ($days === 1) return 'أمس';
+        if ($days === 2) return 'منذ يومين';
+        if ($days >= 3 && $days <= 10) return "منذ {$days} أيام";
+        return "منذ {$days} يوماً";
+    }
+    $weeks = (int) floor($days / 7);
+    if ($days < 30) {
+        if ($weeks === 1) return 'منذ أسبوع';
+        if ($weeks === 2) return 'منذ أسبوعين';
+        return "منذ {$weeks} أسابيع";
+    }
+    $months = (int) floor($days / 30);
+    if ($days < 365) {
+        if ($months === 1) return 'منذ شهر';
+        if ($months === 2) return 'منذ شهرين';
+        if ($months >= 3 && $months <= 10) return "منذ {$months} أشهر";
+        return "منذ {$months} شهراً";
+    }
+    $years = (int) floor($days / 365);
+    if ($years === 1) return 'منذ أكثر من سنة';
+    if ($years === 2) return 'منذ سنتين';
+    return "منذ {$years} سنوات";
+}
+
+/**
+ * تسميات وشارات حركات المخزون بصيغة عربية معبرة
+ */
+function movement_type_ar(string $type, float $delta = 0.0, ?string $refType = null): array
+{
+    $t = strtolower(trim($type));
+    $ref = strtolower(trim((string)$refType));
+
+    if ($t === 'initial' || ($t === 'manual_adjustment' && $delta > 0 && $ref === 'manual')) {
+        return ['label' => 'إضافة مخزون مركزي', 'badge' => 'success', 'icon' => '📥', 'is_in' => true];
+    }
+    if ($t === 'transfer_in' || ($ref === 'transfer' && $delta > 0)) {
+        return ['label' => 'توريد وارد للفرع', 'badge' => 'info', 'icon' => '🚚', 'is_in' => true];
+    }
+    if ($t === 'transfer_out' || ($ref === 'transfer' && $delta < 0)) {
+        return ['label' => 'توريد صادر من المخزن', 'badge' => 'warning', 'icon' => '📤', 'is_in' => false];
+    }
+    if ($t === 'sale' || $ref === 'invoice') {
+        return ['label' => 'بيع فاتورة', 'badge' => 'purple', 'icon' => '🛒', 'is_in' => false];
+    }
+    if ($t === 'return' || $t === 'return_future' || $ref === 'return') {
+        return ['label' => 'مرتجع بيع', 'badge' => 'success', 'icon' => '↩️', 'is_in' => true];
+    }
+    if ($ref === 'waste' || str_contains($t, 'waste')) {
+        return ['label' => 'هالك وتالف', 'badge' => 'danger', 'icon' => '🗑️', 'is_in' => false];
+    }
+    if ($delta > 0) {
+        return ['label' => 'تسوية جردية بالزيادة', 'badge' => 'info', 'icon' => '➕', 'is_in' => true];
+    }
+    return ['label' => 'تسوية جردية بالخصم', 'badge' => 'danger', 'icon' => '➖', 'is_in' => false];
+}
+
+

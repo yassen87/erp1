@@ -7570,7 +7570,7 @@ function record_customer_survey_feedback(string $token, string $rating, ?string 
     return $survey;
 }
 
-/**
+/** 
  * تسجيل دين مباشر على العميل دون ارتباط بفاتورة أو منتج
  */
 function add_direct_customer_debt(int $customerId, float $amount, ?string $notes = null, ?int $locationId = null, ?int $userId = null): int
@@ -8309,3 +8309,362 @@ function all_shipping_orders(array $filters = [], int $limit = 100): array
     $stmt->execute($params);
     return $stmt->fetchAll();
 }
+
+/**
+ * =========================================================================
+ * مراقبة تجديد وإضافة أرصدة المنتجات والمخزون المركزي (Inventory Replenishment & Stock History)
+ * =========================================================================
+ */
+
+/**
+ * جلب قائمة الأصناف مع تفاصيل آخر تجديد رصيد، الكميات المضافة، الرصيد المركزي والإجمالي
+ */
+function get_replenishment_overview(array $filters = []): array
+{
+    $db = pdo();
+    $where = ["p.is_active = 1"];
+    $params = [];
+
+    $q = trim((string)($filters['q'] ?? ''));
+    if ($q !== '') {
+        $where[] = "(p.name LIKE ? OR p.barcode LIKE ? OR p.sku LIKE ?)";
+        $kw = '%' . $q . '%';
+        $params[] = $kw;
+        $params[] = $kw;
+        $params[] = $kw;
+    }
+
+    $type = trim((string)($filters['type'] ?? 'all'));
+    if ($type !== '' && $type !== 'all') {
+        $where[] = "p.type = ?";
+        $params[] = $type;
+    }
+
+    $locId = !empty($filters['location_id']) && $filters['location_id'] !== 'all' ? (int)$filters['location_id'] : null;
+    $locFilterSql = "";
+    if ($locId !== null) {
+        $locFilterSql = " AND im2.location_id = " . $locId;
+    }
+
+    $whereSql = implode(' AND ', $where);
+
+    $sql = "SELECT p.id, p.name, p.barcode, p.sku, p.type, p.unit, p.sale_price, p.cost_price, p.min_stock,
+                   d.perfume_family, d.quality_grade, d.price_per_gram,
+                   b.size_ml,
+                   (SELECT COALESCE(SUM(ib.quantity), 0) FROM inventory_balances ib JOIN locations l ON l.id = ib.location_id WHERE ib.product_id = p.id AND l.type = 'warehouse') AS warehouse_stock,
+                   (SELECT COALESCE(SUM(ib.quantity), 0) FROM inventory_balances ib WHERE ib.product_id = p.id) AS total_stock,
+                   (SELECT COALESCE(SUM(im.quantity_delta), 0) FROM inventory_movements im WHERE im.product_id = p.id AND im.quantity_delta > 0 AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in') {$locFilterSql}) AS total_added_qty,
+                   (SELECT COUNT(im.id) FROM inventory_movements im WHERE im.product_id = p.id AND im.quantity_delta > 0 AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in') {$locFilterSql}) AS replenishment_count,
+                   last_im.id AS last_movement_id,
+                   last_im.created_at AS last_replenished_at,
+                   last_im.quantity_delta AS last_replenished_qty,
+                   last_im.notes AS last_replenished_notes,
+                   last_im.movement_type AS last_movement_type,
+                   last_u.name AS last_replenished_user,
+                   last_loc.name AS last_replenished_location,
+                   last_loc.type AS last_replenished_location_type
+            FROM products p
+            LEFT JOIN product_perfume_details d ON d.product_id = p.id
+            LEFT JOIN product_bottle_details b ON b.product_id = p.id
+            LEFT JOIN inventory_movements last_im ON last_im.id = (
+                SELECT im2.id FROM inventory_movements im2 
+                WHERE im2.product_id = p.id AND im2.quantity_delta > 0 AND im2.movement_type IN ('initial', 'manual_adjustment', 'transfer_in') {$locFilterSql}
+                ORDER BY im2.created_at DESC, im2.id DESC LIMIT 1
+            )
+            LEFT JOIN users last_u ON last_u.id = last_im.created_by
+            LEFT JOIN locations last_loc ON last_loc.id = last_im.location_id
+            WHERE {$whereSql}";
+
+    $status = trim((string)($filters['status'] ?? 'all'));
+    if ($status === 'replenished_recently') {
+        $sql .= " HAVING last_replenished_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+    } elseif ($status === 'never_replenished') {
+        $sql .= " HAVING last_replenished_at IS NULL";
+    } elseif ($status === 'low_stock') {
+        $sql .= " HAVING (warehouse_stock <= p.min_stock AND p.min_stock > 0)";
+    } elseif ($status === 'out_of_stock') {
+        $sql .= " HAVING (warehouse_stock <= 0)";
+    }
+
+    if (!empty($filters['date_from'])) {
+        $sql .= " AND DATE(last_im.created_at) >= " . $db->quote($filters['date_from']);
+    }
+    if (!empty($filters['date_to'])) {
+        $sql .= " AND DATE(last_im.created_at) <= " . $db->quote($filters['date_to']);
+    }
+
+    $sort = trim((string)($filters['sort'] ?? 'last_replenished'));
+    if ($sort === 'last_replenished') {
+        $sql .= " ORDER BY (last_replenished_at IS NULL), last_replenished_at DESC, p.name ASC";
+    } elseif ($sort === 'name') {
+        $sql .= " ORDER BY (p.type = 'perfume_gram') DESC, p.name ASC";
+    } elseif ($sort === 'stock_asc') {
+        $sql .= " ORDER BY warehouse_stock ASC, p.name ASC";
+    } elseif ($sort === 'stock_desc') {
+        $sql .= " ORDER BY warehouse_stock DESC, p.name ASC";
+    } elseif ($sort === 'total_added') {
+        $sql .= " ORDER BY total_added_qty DESC, p.name ASC";
+    }
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * جلب السجل الزمني التفصيلي لكل الحركات التي تمت على المنتج (كشف حساب ورصيد تراكمي)
+ */
+function get_product_movement_history(int $productId, ?int $locationId = null, array $filters = []): array
+{
+    $db = pdo();
+    $where = ["im.product_id = ?"];
+    $params = [$productId];
+
+    if ($locationId !== null && $locationId > 0) {
+        $where[] = "im.location_id = ?";
+        $params[] = $locationId;
+    }
+
+    if (!empty($filters['date_from'])) {
+        $where[] = "DATE(im.created_at) >= ?";
+        $params[] = $filters['date_from'];
+    }
+    if (!empty($filters['date_to'])) {
+        $where[] = "DATE(im.created_at) <= ?";
+        $params[] = $filters['date_to'];
+    }
+
+    $movType = trim((string)($filters['movement_type'] ?? 'all'));
+    if ($movType === 'additions') {
+        $where[] = "im.quantity_delta > 0 AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')";
+    } elseif ($movType === 'sales') {
+        $where[] = "im.movement_type = 'sale' OR im.reference_type = 'invoice'";
+    } elseif ($movType === 'transfers') {
+        $where[] = "im.reference_type = 'transfer' OR im.movement_type IN ('transfer_in', 'transfer_out')";
+    } elseif ($movType === 'waste') {
+        $where[] = "im.reference_type = 'waste' OR im.movement_type = 'waste'";
+    } elseif ($movType === 'returns') {
+        $where[] = "im.reference_type = 'return' OR im.movement_type IN ('return', 'return_future')";
+    }
+
+    $whereSql = implode(' AND ', $where);
+
+    $sql = "SELECT im.id, im.location_id, im.movement_type, im.quantity_delta, im.unit_cost,
+                   im.reference_type, im.reference_id, im.notes, im.created_at, im.created_by,
+                   l.name AS location_name, l.type AS location_type,
+                   u.name AS user_name,
+                   inv.invoice_number,
+                   c.name AS customer_name,
+                   tr.transfer_number,
+                   from_loc.name AS from_location_name,
+                   to_loc.name AS to_location_name
+            FROM inventory_movements im
+            JOIN locations l ON l.id = im.location_id
+            JOIN users u ON u.id = im.created_by
+            LEFT JOIN invoices inv ON (im.reference_type = 'invoice' AND inv.id = im.reference_id)
+            LEFT JOIN customers c ON c.id = inv.customer_id
+            LEFT JOIN inventory_transfers tr ON (im.reference_type = 'transfer' AND tr.id = im.reference_id)
+            LEFT JOIN locations from_loc ON from_loc.id = tr.from_location_id
+            LEFT JOIN locations to_loc ON to_loc.id = tr.to_location_id
+            WHERE {$whereSql}
+            ORDER BY im.created_at ASC, im.id ASC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // حساب الرصيد التراكمي زمنياً بدقة لحظة بلحظة
+    $runningBalance = 0.0;
+    foreach ($rows as &$r) {
+        $runningBalance += (float)$r['quantity_delta'];
+        $r['running_balance'] = $runningBalance;
+    }
+    unset($r);
+
+    // إرجاع السجل من الأحدث إلى الأقدم مع الاحتفاظ بالرصيد التراكمي الدقيق لكل لحظة
+    return array_reverse($rows);
+}
+
+/**
+ * جلب تفاصيل صنف كاملة مع أرصدته في جميع الفروع والمخزن
+ */
+function get_product_detailed_info(int $productId): ?array
+{
+    $db = pdo();
+    $stmt = $db->prepare("SELECT p.*, 
+                                 d.perfume_family, d.quality_grade, d.price_per_gram,
+                                 b.size_ml 
+                          FROM products p 
+                          LEFT JOIN product_perfume_details d ON d.product_id = p.id 
+                          LEFT JOIN product_bottle_details b ON b.product_id = p.id 
+                          WHERE p.id = ?");
+    $stmt->execute([$productId]);
+    $prod = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$prod) {
+        return null;
+    }
+
+    // جلب الأرصدة في كل موقع
+    $stmtStocks = $db->prepare("SELECT l.id AS location_id, l.name AS location_name, l.type AS location_type,
+                                       COALESCE(ib.quantity, 0) AS stock_qty
+                                FROM locations l
+                                LEFT JOIN inventory_balances ib ON ib.location_id = l.id AND ib.product_id = ?
+                                WHERE l.is_active = 1
+                                ORDER BY (l.type = 'warehouse') DESC, l.name ASC");
+    $stmtStocks->execute([$productId]);
+    $prod['stocks'] = $stmtStocks->fetchAll(PDO::FETCH_ASSOC);
+
+    // إجمالي الرصيد والرصيد المركزي
+    $totalStock = 0.0;
+    $warehouseStock = 0.0;
+    foreach ($prod['stocks'] as $s) {
+        $q = (float)$s['stock_qty'];
+        $totalStock += $q;
+        if ($s['location_type'] === 'warehouse') {
+            $warehouseStock += $q;
+        }
+    }
+    $prod['warehouse_stock'] = $warehouseStock;
+    $prod['total_stock'] = $totalStock;
+
+    // ملخص إجمالي الوارد والتجديد وإجمالي المنصرف
+    $stmtSums = $db->prepare("SELECT 
+        COALESCE(SUM(CASE WHEN quantity_delta > 0 THEN quantity_delta ELSE 0 END), 0) AS total_in,
+        COALESCE(SUM(CASE WHEN quantity_delta < 0 THEN ABS(quantity_delta) ELSE 0 END), 0) AS total_out,
+        COALESCE(SUM(CASE WHEN movement_type = 'sale' OR reference_type = 'invoice' THEN ABS(quantity_delta) ELSE 0 END), 0) AS total_sold,
+        COALESCE(SUM(CASE WHEN reference_type = 'waste' THEN ABS(quantity_delta) ELSE 0 END), 0) AS total_wasted,
+        MAX(CASE WHEN quantity_delta > 0 AND movement_type IN ('initial', 'manual_adjustment', 'transfer_in') THEN created_at ELSE NULL END) AS last_replenished_at,
+        MIN(created_at) AS first_movement_at,
+        COUNT(id) AS total_movements_count
+        FROM inventory_movements WHERE product_id = ?");
+    $stmtSums->execute([$productId]);
+    $sums = $stmtSums->fetch(PDO::FETCH_ASSOC);
+    $prod['stats'] = $sums;
+
+    return $prod;
+}
+
+/**
+ * جلب أحدث حركات الإضافة والتجديد للمخزن المركزي
+ */
+function get_recent_central_additions(int $limit = 60, array $filters = []): array
+{
+    $db = pdo();
+    $where = ["im.quantity_delta > 0", "im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')"];
+    $params = [];
+
+    if (!empty($filters['location_id']) && $filters['location_id'] !== 'all') {
+        $where[] = "im.location_id = ?";
+        $params[] = (int)$filters['location_id'];
+    }
+
+    if (!empty($filters['product_id'])) {
+        $where[] = "im.product_id = ?";
+        $params[] = (int)$filters['product_id'];
+    }
+
+    if (!empty($filters['date_from'])) {
+        $where[] = "DATE(im.created_at) >= ?";
+        $params[] = $filters['date_from'];
+    }
+
+    if (!empty($filters['date_to'])) {
+        $where[] = "DATE(im.created_at) <= ?";
+        $params[] = $filters['date_to'];
+    }
+
+    $q = trim((string)($filters['q'] ?? ''));
+    if ($q !== '') {
+        $where[] = "(p.name LIKE ? OR im.notes LIKE ? OR l.name LIKE ?)";
+        $kw = '%' . $q . '%';
+        $params[] = $kw;
+        $params[] = $kw;
+        $params[] = $kw;
+    }
+
+    $whereSql = implode(' AND ', $where);
+
+    $sql = "SELECT im.id, im.location_id, im.product_id, im.movement_type, im.quantity_delta,
+                   im.reference_type, im.reference_id, im.notes, im.created_at,
+                   p.name AS product_name, p.barcode AS product_barcode, p.type AS product_type, p.unit, p.sale_price, p.cost_price,
+                   l.name AS location_name, l.type AS location_type,
+                   u.name AS user_name
+            FROM inventory_movements im
+            JOIN products p ON p.id = im.product_id
+            JOIN locations l ON l.id = im.location_id
+            JOIN users u ON u.id = im.created_by
+            WHERE {$whereSql}
+            ORDER BY im.created_at DESC, im.id DESC
+            LIMIT {$limit}";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * إحصائيات عامة لبطاقات KPI لمراقبة تجديد المخزون
+ */
+function get_replenishment_statistics(): array
+{
+    $db = pdo();
+
+    // إجمالي الزيوت المضافة خلال آخر 30 يوماً
+    $stmtOils = $db->query("SELECT COALESCE(SUM(im.quantity_delta), 0) 
+                            FROM inventory_movements im
+                            JOIN products p ON p.id = im.product_id
+                            WHERE p.type = 'perfume_gram' AND im.quantity_delta > 0 
+                              AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')
+                              AND im.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+    $oilGrams30 = (float)($stmtOils->fetchColumn() ?: 0);
+
+    // إجمالي القطع والزجاجات المضافة خلال آخر 30 يوماً
+    $stmtPieces = $db->query("SELECT COALESCE(SUM(im.quantity_delta), 0) 
+                              FROM inventory_movements im
+                              JOIN products p ON p.id = im.product_id
+                              WHERE p.type != 'perfume_gram' AND im.quantity_delta > 0 
+                                AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')
+                                AND im.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+    $pieces30 = (float)($stmtPieces->fetchColumn() ?: 0);
+
+    // عدد الأصناف التي تم تجديد رصيدها خلال آخر 30 يوماً
+    $stmtUnique = $db->query("SELECT COUNT(DISTINCT im.product_id) 
+                              FROM inventory_movements im
+                              WHERE im.quantity_delta > 0 
+                                AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')
+                                AND im.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+    $uniqueProds30 = (int)($stmtUnique->fetchColumn() ?: 0);
+
+    // عدد الأصناف منخفضة الرصيد في المخزن المركزي (stock <= min_stock)
+    $stmtLow = $db->query("SELECT COUNT(DISTINCT p.id)
+                           FROM products p
+                           LEFT JOIN (
+                               SELECT b.product_id, SUM(b.quantity) AS qty
+                               FROM inventory_balances b
+                               JOIN locations l ON l.id = b.location_id
+                               WHERE l.type = 'warehouse'
+                               GROUP BY b.product_id
+                           ) w ON w.product_id = p.id
+                           WHERE p.is_active = 1 AND COALESCE(w.qty, 0) <= p.min_stock AND p.min_stock > 0");
+    $lowStockCount = (int)($stmtLow->fetchColumn() ?: 0);
+
+    // آخر حركة تجديد رصيد تمت في النظام
+    $stmtLast = $db->query("SELECT im.created_at, im.quantity_delta, p.name AS product_name, p.unit, u.name AS user_name, l.name AS location_name
+                            FROM inventory_movements im
+                            JOIN products p ON p.id = im.product_id
+                            JOIN users u ON u.id = im.created_by
+                            JOIN locations l ON l.id = im.location_id
+                            WHERE im.quantity_delta > 0 AND im.movement_type IN ('initial', 'manual_adjustment', 'transfer_in')
+                            ORDER BY im.created_at DESC, im.id DESC
+                            LIMIT 1");
+    $lastMov = $stmtLast->fetch(PDO::FETCH_ASSOC) ?: null;
+
+    return [
+        'oil_grams_30'     => $oilGrams30,
+        'pieces_30'        => $pieces30,
+        'unique_prods_30'  => $uniqueProds30,
+        'low_stock_count'  => $lowStockCount,
+        'last_movement'    => $lastMov,
+    ];
+}
+
