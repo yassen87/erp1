@@ -235,13 +235,17 @@ $productTypes = [
 .stock-filter-field select {
     padding: 8px 12px;
     border-radius: 8px;
-    border: 1px solid var(--line, #cbd5e1);
+    border: 1px solid var(--field-border, var(--line, #cbd5e1));
     font-size: 13px;
     font-weight: 600;
-    background: var(--surface, #ffffff);
+    background-color: var(--field-bg, var(--surface, #ffffff));
     color: var(--ink, #0f172a);
     outline: none;
     width: 100%;
+}
+
+.stock-filter-field select {
+    padding-inline-end: 34px;
 }
 
 .stock-filter-field input:focus,
@@ -267,8 +271,8 @@ $productTypes = [
 }
 
 .stock-table th {
-    background: #f8fafc;
-    color: #475569;
+    background: var(--surface-soft, #f8fafc);
+    color: var(--primary-dark, #475569);
     font-weight: 800;
     font-size: 12px;
     padding: 12px 14px;
@@ -278,12 +282,12 @@ $productTypes = [
 
 .stock-table td {
     padding: 12px 14px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--line, #f1f5f9);
     vertical-align: middle;
 }
 
 .stock-table tbody tr:hover {
-    background-color: rgba(248, 250, 252, 0.85);
+    background-color: var(--primary-soft, rgba(248, 250, 252, 0.85));
 }
 
 /* الشارات الزمنية والحالات */
@@ -314,9 +318,9 @@ $productTypes = [
 }
 
 .badge-time-old {
-    background: #f1f5f9;
-    color: #475569;
-    border: 1px solid #e2e8f0;
+    background: var(--surface-soft, #f1f5f9);
+    color: var(--muted, #475569);
+    border: 1px solid var(--line, #e2e8f0);
     padding: 3px 8px;
     border-radius: 6px;
     font-size: 11px;
@@ -371,7 +375,7 @@ $productTypes = [
 
 /* كارت تفاصيل الصنف في التبويب الزمني */
 .product-hero-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    background: linear-gradient(135deg, var(--surface, #ffffff) 0%, var(--surface-soft, #f8fafc) 100%);
     border: 1.5px solid var(--line, #e2e8f0);
     border-radius: 14px;
     padding: 20px;
@@ -391,6 +395,19 @@ $productTypes = [
     padding-bottom: 14px;
 }
 
+.hero-stat-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+}
+
+.hero-stat-card.highlight {
+    border: 1.5px solid var(--primary, #b98418);
+    background: var(--surface-soft, #fffdfa);
+}
+
 .product-hero-stocks-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -398,7 +415,7 @@ $productTypes = [
 }
 
 .product-stock-pill {
-    background: #ffffff;
+    background: var(--surface, #ffffff);
     border: 1px solid var(--line, #e2e8f0);
     border-radius: 10px;
     padding: 10px 12px;
@@ -406,8 +423,8 @@ $productTypes = [
 }
 
 .product-stock-pill.warehouse {
-    border-color: #b98418;
-    background: #fffdfa;
+    border-color: var(--primary, #b98418);
+    background: var(--surface-soft, #fffdfa);
 }
 
 .running-balance-val {
@@ -415,6 +432,115 @@ $productTypes = [
     font-size: 13.5px;
     direction: ltr;
     display: inline-block;
+    color: var(--ink, #0f172a);
+    background: var(--surface-soft, #f8fafc);
+    border: 1px solid var(--line, #e2e8f0);
+    border-radius: 6px;
+    padding: 3px 8px;
+}
+
+.val-positive { color: #166534; }
+.val-negative { color: #dc2626; }
+.val-sales    { color: #7c3aed; }
+.val-waste    { color: #991b1b; }
+.val-added    { color: #1e40af; }
+
+/* ===== تحسينات وتنسيق الوضع الداكن (Dark Mode) ===== */
+:root[data-theme="dark"] .stock-kpi-card,
+:root[data-theme="dark"] .stock-tabs-nav,
+:root[data-theme="dark"] .stock-filter-box,
+:root[data-theme="dark"] .stock-table-card,
+:root[data-theme="dark"] .search-panel {
+    background: var(--surface) !important;
+    border-color: color-mix(in srgb, var(--primary) 28%, var(--line)) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+:root[data-theme="dark"] .stock-tab-btn.active {
+    background: linear-gradient(135deg, var(--primary), var(--accent)) !important;
+    color: #140d04 !important;
+}
+
+:root[data-theme="dark"] .product-hero-card {
+    background: linear-gradient(135deg, #1b1307 0%, #120c04 100%) !important;
+    border-color: color-mix(in srgb, var(--primary) 42%, var(--line)) !important;
+    box-shadow: var(--shadow) !important;
+}
+
+:root[data-theme="dark"] .hero-stat-card {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: var(--line) !important;
+}
+
+:root[data-theme="dark"] .hero-stat-card.highlight {
+    background: rgba(214, 168, 68, 0.12) !important;
+    border-color: var(--primary) !important;
+}
+
+:root[data-theme="dark"] .product-stock-pill {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: var(--line) !important;
+}
+
+:root[data-theme="dark"] .product-stock-pill.warehouse {
+    background: rgba(214, 168, 68, 0.12) !important;
+    border-color: var(--primary) !important;
+}
+
+:root[data-theme="dark"] .running-balance-val {
+    background: rgba(214, 168, 68, 0.14) !important;
+    color: var(--ink) !important;
+    border-color: rgba(214, 168, 68, 0.38) !important;
+}
+
+:root[data-theme="dark"] .stock-table tbody tr:hover {
+    background-color: rgba(214, 168, 68, 0.08) !important;
+}
+
+:root[data-theme="dark"] .badge-time-recent,
+:root[data-theme="dark"] .badge-type-oil,
+:root[data-theme="dark"] .badge-type-bottle {
+    background: rgba(34, 197, 94, 0.16) !important;
+    color: #4ade80 !important;
+    border-color: rgba(74, 222, 128, 0.35) !important;
+}
+
+:root[data-theme="dark"] .badge-time-mid {
+    background: rgba(245, 158, 11, 0.18) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(251, 191, 36, 0.38) !important;
+}
+
+:root[data-theme="dark"] .badge-time-old {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--muted) !important;
+    border-color: var(--line) !important;
+}
+
+:root[data-theme="dark"] .badge-time-never {
+    background: rgba(239, 68, 68, 0.17) !important;
+    color: #f87171 !important;
+    border-color: rgba(248, 113, 113, 0.38) !important;
+}
+
+:root[data-theme="dark"] .badge-type-prod {
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #60a5fa !important;
+    border-color: rgba(96, 165, 250, 0.38) !important;
+}
+
+:root[data-theme="dark"] .val-positive { color: #4ade80 !important; }
+:root[data-theme="dark"] .val-negative { color: #f87171 !important; }
+:root[data-theme="dark"] .val-sales    { color: #c084fc !important; }
+:root[data-theme="dark"] .val-waste    { color: #fb7185 !important; }
+:root[data-theme="dark"] .val-added    { color: #60a5fa !important; }
+
+:root[data-theme="dark"] .stock-multi-match-box {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+}
+:root[data-theme="dark"] .stock-multi-match-title {
+    color: #fbbf24 !important;
 }
 
 @media print {
@@ -464,7 +590,7 @@ $productTypes = [
                        list="stock-products-datalist" 
                        placeholder="🔍 امسح الباركود بالسكانر أو اكتب اسم الصنف أو زيت المخزون ثم اضغط Enter..." 
                        autocomplete="off" autofocus
-                       style="width: 100%; padding: 12px 18px; border: 1.5px solid var(--line, #cbd5e1); border-radius: 10px; font-size: 14.5px; font-weight: 700; color: var(--ink); outline: none; background: #fff;">
+                       style="width: 100%; padding: 12px 18px; border: 1.5px solid var(--field-border, var(--line, #cbd5e1)); border-radius: 10px; font-size: 14.5px; font-weight: 700; color: var(--ink); outline: none; background-color: var(--field-bg, var(--surface, #fff));">
             </div>
 
             <button type="submit" class="btn primary" style="padding: 12px 24px; font-weight: 800; font-size: 14px; white-space: nowrap; border-radius:10px;">
@@ -490,14 +616,14 @@ $productTypes = [
 
     <!-- تنبيه عند وجود عدة أصناف مطابقة للبحث -->
     <?php if (!empty($multipleMatches)): ?>
-        <div class="no-print" style="background:#fffbeb; border:1.5px solid #f59e0b; border-radius:12px; padding:14px 18px; box-shadow:0 2px 6px rgba(245, 158, 11, 0.1);">
-            <div style="font-weight:800; font-size:13.5px; color:#92400e; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+        <div class="no-print stock-multi-match-box" style="background:var(--warning-soft, #fffbeb); border:1.5px solid #f59e0b; border-radius:12px; padding:14px 18px; box-shadow:0 2px 6px rgba(245, 158, 11, 0.1);">
+            <div class="stock-multi-match-title" style="font-weight:800; font-size:13.5px; color:var(--warning, #92400e); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
                 <span>⚠️</span> يوجد أكثر من صنف يتطابق مع بحثك عن "<strong><?= e($query) ?></strong>". اضغط على الصنف المطلوب لعرض كشف حساب تجديده فوراً:
             </div>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
                 <?php foreach ($multipleMatches as $m): ?>
                     <a href="index.php?r=stock_history&tab=timeline&product_id=<?= (int)$m['id'] ?>" 
-                       class="btn small" style="background:#ffffff; border:1px solid #d97706; color:#92400e; font-weight:700; border-radius:8px; padding:6px 12px;">
+                       class="btn small" style="border:1px solid #d97706; font-weight:700; border-radius:8px; padding:6px 12px;">
                         <?= e($m['name']) ?> <?= $m['barcode'] ? ' ('.e($m['barcode']).')' : '' ?> ⬅
                     </a>
                 <?php endforeach; ?>
@@ -734,7 +860,7 @@ $productTypes = [
                                     </td>
                                     <td>
                                         <?php if ($row['last_replenished_at']): ?>
-                                            <div style="font-weight:700; font-size:12.5px; color:#0f172a;">
+                                            <div style="font-weight:700; font-size:12.5px; color:var(--ink);">
                                                 <?= format_datetime($row['last_replenished_at']) ?>
                                             </div>
                                             <div style="margin-top:3px;">
@@ -748,7 +874,7 @@ $productTypes = [
                                     </td>
                                     <td style="text-align:center;">
                                         <?php if ($row['last_replenished_qty'] !== null): ?>
-                                            <span style="font-weight:800; color:#166534; font-size:14px;">
+                                            <span class="val-positive" style="font-weight:800; font-size:14px;">
                                                 +<?= qty($row['last_replenished_qty']) ?>
                                             </span>
                                             <span style="font-size:11px; color:var(--muted);"><?= $unitName ?></span>
@@ -782,7 +908,7 @@ $productTypes = [
                                         <span style="font-size:11px; color:var(--muted);"><?= $unitName ?></span>
                                     </td>
                                     <td style="text-align:center;">
-                                        <div style="font-weight:800; font-size:13px; color:#1e40af;">
+                                        <div class="val-added" style="font-weight:800; font-size:13px;">
                                             <?= qty($row['total_added_qty']) ?> <?= $unitName ?>
                                         </div>
                                         <div style="font-size:10.5px; color:var(--muted);">
@@ -905,7 +1031,7 @@ $productTypes = [
                         <div style="text-align:left;">
                             <span style="font-size:11px; color:var(--muted); display:block;">تاريخ آخر تجديد رصيد:</span>
                             <?php if (!empty($pStats['last_replenished_at'])): ?>
-                                <span style="font-weight:800; font-size:13.5px; color:#166534;">
+                                <span class="val-positive" style="font-weight:800; font-size:13.5px;">
                                     <?= format_datetime($pStats['last_replenished_at']) ?>
                                 </span>
                                 <span class="badge-time-recent" style="display:inline-block; margin-right:4px;">
@@ -920,36 +1046,36 @@ $productTypes = [
 
                 <!-- إحصائيات حركة الصنف -->
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
-                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                    <div class="hero-stat-card">
                         <span style="font-size:11px; color:var(--muted); font-weight:700;">إجمالي الوارد (+)</span>
-                        <div style="font-size:16px; font-weight:800; color:#166534; margin-top:2px;">
+                        <div class="val-positive" style="font-size:16px; font-weight:800; margin-top:2px;">
                             +<?= qty($pStats['total_in'] ?? 0) ?> <small style="font-size:11px;"><?= $unitName ?></small>
                         </div>
                     </div>
 
-                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                    <div class="hero-stat-card">
                         <span style="font-size:11px; color:var(--muted); font-weight:700;">إجمالي المنصرف (-)</span>
-                        <div style="font-size:16px; font-weight:800; color:#dc2626; margin-top:2px;">
+                        <div class="val-negative" style="font-size:16px; font-weight:800; margin-top:2px;">
                             -<?= qty($pStats['total_out'] ?? 0) ?> <small style="font-size:11px;"><?= $unitName ?></small>
                         </div>
                     </div>
 
-                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                    <div class="hero-stat-card">
                         <span style="font-size:11px; color:var(--muted); font-weight:700;">إجمالي المبيعات (فواتير)</span>
-                        <div style="font-size:16px; font-weight:800; color:#7c3aed; margin-top:2px;">
+                        <div class="val-sales" style="font-size:16px; font-weight:800; margin-top:2px;">
                             <?= qty($pStats['total_sold'] ?? 0) ?> <small style="font-size:11px;"><?= $unitName ?></small>
                         </div>
                     </div>
 
-                    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; padding:10px; text-align:center;">
+                    <div class="hero-stat-card">
                         <span style="font-size:11px; color:var(--muted); font-weight:700;">الهالك والتالف</span>
-                        <div style="font-size:16px; font-weight:800; color:#991b1b; margin-top:2px;">
+                        <div class="val-waste" style="font-size:16px; font-weight:800; margin-top:2px;">
                             <?= qty($pStats['total_wasted'] ?? 0) ?> <small style="font-size:11px;"><?= $unitName ?></small>
                         </div>
                     </div>
 
-                    <div style="background:#ffffff; border:1.5px solid #b98418; border-radius:10px; padding:10px; text-align:center;">
-                        <span style="font-size:11px; color:#b98418; font-weight:800;">الرصيد الفعلي الحالي</span>
+                    <div class="hero-stat-card highlight">
+                        <span style="font-size:11px; color:var(--primary, #b98418); font-weight:800;">الرصيد الفعلي الحالي</span>
                         <div style="font-size:17px; font-weight:800; color:var(--ink); margin-top:2px;">
                             <?= qty($selectedProduct['total_stock']) ?> <small style="font-size:11px;"><?= $unitName ?></small>
                         </div>
@@ -1038,13 +1164,13 @@ $productTypes = [
                                             </div>
                                         </td>
                                         <td style="text-align:center;">
-                                            <span style="font-weight:800; font-size:14px; color:<?= $isPositive ? '#166534' : '#dc2626' ?>;">
+                                            <span class="<?= $isPositive ? 'val-positive' : 'val-negative' ?>" style="font-weight:800; font-size:14px;">
                                                 <?= $isPositive ? '+' : '' ?><?= qty($delta) ?>
                                             </span>
                                             <span style="font-size:11px; color:var(--muted);"><?= $unitName ?></span>
                                         </td>
                                         <td style="text-align:center;">
-                                            <span class="running-balance-val" style="color:#0f172a; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:3px 8px;">
+                                            <span class="running-balance-val">
                                                 <?= qty($m['running_balance']) ?> <?= $unitName ?>
                                             </span>
                                         </td>
@@ -1216,7 +1342,7 @@ $productTypes = [
                                         </div>
                                     </td>
                                     <td style="text-align:center;">
-                                        <span style="font-weight:800; font-size:14px; color:#166534;">
+                                        <span class="val-positive" style="font-weight:800; font-size:14px;">
                                             +<?= qty($add['quantity_delta']) ?>
                                         </span>
                                         <span style="font-size:11px; color:var(--muted);"><?= $unitName ?></span>

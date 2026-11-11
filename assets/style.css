@@ -444,7 +444,7 @@ html[dir="ltr"] .nav-section-panel a.active:before {
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
@@ -3108,14 +3108,32 @@ code,
   background-image:
     linear-gradient(45deg, transparent 50%, var(--primary) 50%),
     linear-gradient(135deg, var(--primary) 50%, transparent 50%),
-    linear-gradient(to left, rgba(214, 168, 68, .18), rgba(214, 168, 68, .18));
+    linear-gradient(to left, rgba(214, 168, 68, .18), rgba(214, 168, 68, .18)) !important;
+  background-position:
+    left 17px center,
+    left 11px center,
+    left 0 top !important;
+  background-size:
+    6px 6px,
+    6px 6px,
+    30px 100% !important;
+  background-repeat: no-repeat !important;
 }
 
 html[dir="ltr"]:root[data-theme="dark"] select {
   background-image:
     linear-gradient(45deg, var(--primary) 50%, transparent 50%),
     linear-gradient(135deg, transparent 50%, var(--primary) 50%),
-    linear-gradient(to right, rgba(214, 168, 68, .18), rgba(214, 168, 68, .18));
+    linear-gradient(to right, rgba(214, 168, 68, .18), rgba(214, 168, 68, .18)) !important;
+  background-position:
+    right 17px center,
+    right 11px center,
+    right 0 top !important;
+  background-size:
+    6px 6px,
+    6px 6px,
+    30px 100% !important;
+  background-repeat: no-repeat !important;
 }
 
 :root[data-theme="dark"] select option {

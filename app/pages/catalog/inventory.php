@@ -77,14 +77,17 @@ foreach ($additions as $addition) {
 .inventory-modal {
     display: none;
     position: fixed;
-    z-index: 1000;
+    z-index: 99999;
+    inset: 0;
     left: 0;
     top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(15, 23, 42, 0.5);
+    width: 100vw;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 20px;
+    background-color: rgba(15, 23, 42, 0.65);
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     align-items: center;
     justify-content: center;
 }
@@ -95,12 +98,16 @@ foreach ($additions as $addition) {
 
 .inventory-modal-content {
     background-color: var(--surface);
-    border: 1px solid var(--line);
+    border: 1.5px solid var(--line);
     border-radius: 16px;
     padding: 24px;
-    width: 90%;
-    max-width: 720px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 92%;
+    max-width: 740px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
     animation: modalFadeIn 0.2s ease-out;
 }
 
@@ -314,9 +321,21 @@ foreach ($additions as $addition) {
 <script>
 const groupedTransactionsData = <?= json_encode($groupedAdditions) ?>;
 
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('inventory-items-modal');
+    if (modal && modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+    }
+});
+
 function showTransactionItems(key) {
     const data = groupedTransactionsData[key];
     if (!data) return;
+
+    const modal = document.getElementById('inventory-items-modal');
+    if (modal && modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+    }
 
     document.getElementById('modal-title-date').textContent = data.created_at;
     document.getElementById('modal-title-location').textContent = data.location_name;
@@ -341,17 +360,23 @@ function showTransactionItems(key) {
         tbody.appendChild(tr);
     });
 
-    document.getElementById('inventory-items-modal').classList.add('active');
+    modal.classList.add('active');
 }
 
 function closeInventoryModal() {
     document.getElementById('inventory-items-modal').classList.remove('active');
 }
 
-// Close modal when clicking outside content
+// Close modal when clicking outside content or pressing Escape
 window.addEventListener('click', function(event) {
     const modal = document.getElementById('inventory-items-modal');
     if (event.target === modal) {
+        closeInventoryModal();
+    }
+});
+
+window.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
         closeInventoryModal();
     }
 });

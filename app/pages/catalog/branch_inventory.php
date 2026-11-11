@@ -66,6 +66,126 @@ $treasuryBalances = branch_treasury_balances($locationId);
     margin-top: 5px;
 }
 
+.branch-alert-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(185, 132, 24, 0.16), rgba(185, 132, 24, 0.06));
+    border: 2px solid var(--primary, #b98418);
+    box-shadow: 0 4px 16px rgba(185, 132, 24, 0.14);
+}
+.branch-alert-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.branch-alert-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: var(--primary, #b98418);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(185, 132, 24, 0.3);
+}
+.branch-alert-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.branch-alert-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+}
+.branch-alert-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.branch-name-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--primary, #b98418);
+    color: #fff;
+    padding: 3px 14px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 900;
+    box-shadow: 0 2px 8px rgba(185, 132, 24, 0.25);
+}
+:root[data-theme="dark"] .branch-name-pill {
+    color: #140d04;
+}
+.branch-quick-switcher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.branch-switch-link {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1.5px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+.branch-switch-link:hover {
+    border-color: var(--primary);
+}
+.branch-switch-link.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(185, 132, 24, 0.28);
+}
+:root[data-theme="dark"] .branch-switch-link.active {
+    color: #140d04;
+}
+.branch-floating-toast {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    z-index: 99999;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: #fff;
+    border: 2px solid var(--primary, #d6a844);
+    border-radius: 14px;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    font-family: 'Cairo', sans-serif;
+    direction: rtl;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.branch-floating-toast.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
 /* Section Titles */
 .section-title {
     font-size: 13.5px;
@@ -252,12 +372,13 @@ $treasuryBalances = branch_treasury_balances($locationId);
 
 .filter-select {
     padding: 9px 12px !important;
+    padding-inline-end: 34px !important;
     border-radius: 10px !important;
     border: 1.5px solid var(--line) !important;
     font-size: 13px !important;
     font-weight: 600;
     color: var(--ink) !important;
-    background: var(--surface) !important;
+    background-color: var(--surface) !important;
     cursor: pointer;
     outline: none;
 }
@@ -270,6 +391,47 @@ $treasuryBalances = branch_treasury_balances($locationId);
             <p>متابعة رصيد الأصناف والنقدية المتوفرة للتحويل وحركة إنستا باي وفودافون كاش اليومية لـ: <strong><?= e($locationName) ?></strong></p>
         </div>
     </section>
+
+    <!-- إشعار الفرع الحالي العلوي -->
+    <div class="branch-alert-banner">
+        <div class="branch-alert-main">
+            <div class="branch-alert-icon">🔔</div>
+            <div class="branch-alert-text">
+                <span class="branch-alert-label">تنبيه الفرع المعروض حالياً في صفحة رصيد الفرع:</span>
+                <div class="branch-alert-title">
+                    <span>أنت الآن في فرع:</span>
+                    <span class="branch-name-pill">📍 <?= e($locationName) ?></span>
+                </div>
+            </div>
+        </div>
+        <?php if ($userLocationId === null && count($locations) > 1): ?>
+            <div class="branch-quick-switcher">
+                <span style="font-size:12px; font-weight:700; color:var(--muted); margin-left:4px;">التنقل السريع بين الفروع:</span>
+                <?php foreach ($locations as $l): ?>
+                    <a href="index.php?r=branch_inventory&location_id=<?= e($l['id']) ?>"
+                       class="branch-switch-link <?= !$showAllLocations && (int)$l['id'] === $locationId ? 'active' : '' ?>">
+                        📍 <?= e($l['name']) ?>
+                    </a>
+                <?php endforeach; ?>
+                <a href="index.php?r=branch_inventory&location_id=all"
+                   class="branch-switch-link <?= $showAllLocations ? 'active' : '' ?>">
+                    🌐 كل الفروع
+                </a>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- إشعار منبثق (Toast Notification) لتنبيه المستخدم بالفرع الحالي -->
+    <div id="branch-floating-toast" class="branch-floating-toast" role="status" aria-live="polite">
+        <span style="font-size:22px;">🔔</span>
+        <div>
+            <div style="font-size:11.5px; color:#cbd5e1; font-weight:600;">تنبيه صفحة رصيد الفرع</div>
+            <div style="font-size:14.5px; font-weight:900; color:#fff;">
+                أنت الآن في فرع: <span style="color:#fbbf24; text-decoration:underline;"><?= e($locationName) ?></span>
+            </div>
+        </div>
+        <button type="button" onclick="document.getElementById('branch-floating-toast').classList.remove('show')" style="background:rgba(255,255,255,0.12); border:none; color:#fff; width:26px; height:26px; border-radius:50%; cursor:pointer; font-weight:800; margin-right:6px;">✕</button>
+    </div>
 
     <!-- Financial Treasury Section -->
     <div>
@@ -451,8 +613,8 @@ $treasuryBalances = branch_treasury_balances($locationId);
 </div>
 
 <!-- Modal تعديل كمية المنتج في الفرع -->
-<div id="edit-qty-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:var(--surface,#fff); border-radius:16px; padding:28px 24px; min-width:320px; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+<div id="edit-qty-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:99999; justify-content:center; align-items:center;">
+    <div style="background:var(--surface,#fff); border:1.5px solid var(--line); border-radius:16px; padding:28px 24px; min-width:320px; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <h3 style="margin:0 0 16px; color:var(--primary);">✏️ تعديل كمية المنتج</h3>
         <p id="edit-qty-product-name" style="font-weight:800; font-size:15px; margin:0 0 16px; color:var(--ink);"></p>
         <form method="post" action="index.php?r=inventory">
@@ -476,6 +638,24 @@ $treasuryBalances = branch_treasury_balances($locationId);
 document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('branch-search');
     const barcodeScan = document.getElementById('barcode-scan-branch');
+    const toastEl = document.getElementById('branch-floating-toast');
+    const editModal = document.getElementById('edit-qty-modal');
+
+    if (toastEl && toastEl.parentNode !== document.body) {
+        document.body.appendChild(toastEl);
+    }
+    if (editModal && editModal.parentNode !== document.body) {
+        document.body.appendChild(editModal);
+    }
+
+    if (toastEl) {
+        setTimeout(() => {
+            toastEl.classList.add('show');
+        }, 150);
+        setTimeout(() => {
+            toastEl.classList.remove('show');
+        }, 5800);
+    }
 
     function filterRows(query) {
         const q = query.trim().toLowerCase();
@@ -506,11 +686,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function openEditQty(productId, productName, currentQty, locationId) {
+    const editModal = document.getElementById('edit-qty-modal');
+    if (editModal && editModal.parentNode !== document.body) {
+        document.body.appendChild(editModal);
+    }
     document.getElementById('edit-qty-product-id').value = productId;
     document.getElementById('edit-qty-location-id').value = locationId;
     document.getElementById('edit-qty-product-name').textContent = productName;
     document.getElementById('edit-qty-value').value = currentQty;
-    document.getElementById('edit-qty-modal').style.display = 'flex';
+    editModal.style.display = 'flex';
     document.getElementById('edit-qty-value').focus();
     document.getElementById('edit-qty-value').select();
 }
