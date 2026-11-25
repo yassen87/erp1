@@ -2362,6 +2362,37 @@ html[dir="ltr"]:root[data-theme="dark"] .sidebar {
   background: rgba(192, 148, 53, 0.07);
 }
 
+/* Dark Mode Enhancements for Online POS, Shipping Tracker, and HR Payroll */
+:root[data-theme="dark"] .online-shipping-box {
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+:root[data-theme="dark"] .card {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] .tab-nav-panel,
+:root[data-theme="dark"] .add-adj-panel,
+:root[data-theme="dark"] .payroll-table-panel,
+:root[data-theme="dark"] .detail-panel-wrapper {
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+:root[data-theme="dark"] .payroll-table td,
+:root[data-theme="dark"] .payroll-table th {
+  border-color: var(--line) !important;
+}
+
+:root[data-theme="dark"] .payroll-table tbody tr:hover td {
+  background: var(--surface-soft) !important;
+}
+
 /* صفحة تسجيل الدخول */
 :root[data-theme="dark"] .login-page {
   background: radial-gradient(circle at 50% 0%, rgba(192, 148, 53, .15), transparent 35rem),

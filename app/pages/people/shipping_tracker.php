@@ -55,37 +55,37 @@ foreach ($allOrdersForCounts as $o) {
 
 <!-- Quick Statistics Bar -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;">
-    <a href="index.php?r=shipping_tracker" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid var(--primary, #c9a84c);">
+    <a href="index.php?r=shipping_tracker" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid var(--primary, #c9a84c); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);">
         <div style="font-size: 11.5px; color: var(--muted); font-weight: bold;">إجمالي الشحنات</div>
-        <div style="font-size: 22px; font-weight: 900; margin-top: 4px;"><?= $counts['total'] ?></div>
+        <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: var(--ink);"><?= $counts['total'] ?></div>
     </a>
-    <a href="index.php?r=shipping_tracker&status=preparing" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #f59e0b;">
+    <a href="index.php?r=shipping_tracker&status=preparing" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #f59e0b; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);">
         <div style="font-size: 11.5px; color: #f59e0b; font-weight: bold;">⏳ قيد التجهيز</div>
-        <div style="font-size: 22px; font-weight: 900; margin-top: 4px;"><?= $counts['preparing'] ?></div>
+        <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: var(--ink);"><?= $counts['preparing'] ?></div>
     </a>
-    <a href="index.php?r=shipping_tracker&status=shipped" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #0284c7;">
+    <a href="index.php?r=shipping_tracker&status=shipped" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #0284c7; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);">
         <div style="font-size: 11.5px; color: #0284c7; font-weight: bold;">🚚 مع المندوب / شُحنت</div>
-        <div style="font-size: 22px; font-weight: 900; margin-top: 4px;"><?= $counts['shipped'] ?></div>
+        <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: var(--ink);"><?= $counts['shipped'] ?></div>
     </a>
-    <a href="index.php?r=shipping_tracker&status=delivered" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #10b981;">
+    <a href="index.php?r=shipping_tracker&status=delivered" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #10b981; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);">
         <div style="font-size: 11.5px; color: #10b981; font-weight: bold;">✅ تم التسليم بنجاح</div>
-        <div style="font-size: 22px; font-weight: 900; margin-top: 4px;"><?= $counts['delivered'] ?></div>
+        <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: var(--ink);"><?= $counts['delivered'] ?></div>
     </a>
-    <a href="index.php?r=shipping_tracker&status=returned" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #ef4444;">
+    <a href="index.php?r=shipping_tracker&status=returned" class="card" style="padding: 14px; text-decoration: none; color: inherit; text-align: center; border-right: 4px solid #ef4444; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow);">
         <div style="font-size: 11.5px; color: #ef4444; font-weight: bold;">❌ المرتجعات</div>
-        <div style="font-size: 22px; font-weight: 900; margin-top: 4px;"><?= $counts['returned'] ?></div>
+        <div style="font-size: 22px; font-weight: 900; margin-top: 4px; color: var(--ink);"><?= $counts['returned'] ?></div>
     </a>
 </div>
 
 <!-- ========================================================================= -->
 <!--                   قسم مسح الباركود السريع (Fast Scanner)                   -->
 <!-- ========================================================================= -->
-<div class="card" style="margin-bottom: 24px; border: 2px solid var(--primary, #c9a84c); padding: 20px; background: #fff;">
+<div class="card" style="margin-bottom: 24px; border: 2px solid var(--primary, #c9a84c); padding: 20px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow);">
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
         <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 24px;">🏷️</span>
             <div>
-                <h3 style="margin: 0; font-size: 17px; font-weight: 800;">سكانر مسح الباركود الفوري</h3>
+                <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--ink);">سكانر مسح الباركود الفوري</h3>
                 <small style="color: var(--muted);">قم بمسح الباركود من بوليصة الشحن أو كتابة رقم الفاتورة / الهاتف واضغط Enter</small>
             </div>
         </div>
@@ -97,7 +97,7 @@ foreach ($allOrdersForCounts as $o) {
             <input type="text" id="barcode-scan-input" 
                    placeholder="امسح باركود البوليصة هنا بالجهاز أو اكتب رقم الأوردر / الهاتف..." 
                    autocomplete="off" autofocus
-                   style="width: 100%; height: 50px; font-size: 16px; font-weight: bold; padding: 0 45px 0 16px; border: 2px solid #cbd5e1; border-radius: 8px;">
+                   style="width: 100%; height: 50px; font-size: 16px; font-weight: bold; padding: 0 45px 0 16px; border: 2px solid var(--line); border-radius: 8px; background: var(--field-bg); color: var(--ink);">
             <span style="position: absolute; right: 14px; top: 14px; font-size: 20px; opacity: 0.6;">🔍</span>
         </div>
         <button type="button" class="btn primary" id="btn-manual-scan" style="height: 50px; padding: 0 24px; font-weight: 800; font-size: 15px;">
@@ -106,37 +106,37 @@ foreach ($allOrdersForCounts as $o) {
     </div>
 
     <!-- Active Scanned Order Card (Hidden by default, shown on scan) -->
-    <div id="scanned-order-container" style="display: none; margin-top: 20px; border-top: 1.5px dashed #cbd5e1; padding-top: 18px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; background: #f8fafc; padding: 18px; border-radius: 10px; border: 1px solid #e2e8f0;">
+    <div id="scanned-order-container" style="display: none; margin-top: 20px; border-top: 1.5px dashed var(--line); padding-top: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px; background: var(--surface-soft); padding: 18px; border-radius: 10px; border: 1px solid var(--line);">
             
             <!-- Order & Customer Details -->
             <div style="flex: 1 1 350px;">
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <span id="scanned-status-badge" class="badge" style="font-size: 13px; font-weight: 800; padding: 6px 14px;"></span>
-                    <h3 id="scanned-inv-number" style="margin: 0; font-size: 20px; font-family: monospace; font-weight: 900; color: #0f172a;"></h3>
+                    <h3 id="scanned-inv-number" style="margin: 0; font-size: 20px; font-family: monospace; font-weight: 900; color: var(--ink);"></h3>
                 </div>
 
-                <div style="font-size: 16px; font-weight: 800; color: #1e293b; margin-bottom: 6px;" id="scanned-customer-name"></div>
+                <div style="font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 6px;" id="scanned-customer-name"></div>
 
                 <div style="display: flex; gap: 12px; font-size: 14px; font-weight: 700; margin-bottom: 8px;">
-                    <span id="scanned-phone1" style="background:#fff; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-family:monospace;"></span>
-                    <span id="scanned-phone2" style="background:#fff; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-family:monospace;"></span>
+                    <span id="scanned-phone1" style="background:var(--surface); border:1px solid var(--line); color:var(--ink); padding:3px 8px; border-radius:4px; font-family:monospace;"></span>
+                    <span id="scanned-phone2" style="background:var(--surface); border:1px solid var(--line); color:var(--ink); padding:3px 8px; border-radius:4px; font-family:monospace;"></span>
                 </div>
 
-                <div style="font-size: 13.5px; color: #334155; margin-bottom: 8px; line-height: 1.4;">
+                <div style="font-size: 13.5px; color: var(--muted); margin-bottom: 8px; line-height: 1.4;">
                     <span id="scanned-gov-city" class="badge muted" style="margin-left: 6px;"></span>
                     <span id="scanned-address"></span>
                 </div>
 
-                <div style="display: flex; gap: 15px; margin-top: 12px; font-size: 14px; font-weight: 800;">
+                <div style="display: flex; gap: 15px; margin-top: 12px; font-size: 14px; font-weight: 800; color: var(--ink);">
                     <div>المطلوب تحصيله (COD): <span id="scanned-cod-amount" style="color: #059669; font-size: 17px;"></span></div>
                     <div>إجمالي الأوردر: <span id="scanned-total-amount"></span></div>
                 </div>
             </div>
 
             <!-- Status Changer & Action Controls -->
-            <div style="flex: 1 1 300px; background: #fff; padding: 16px; border-radius: 8px; border: 1.5px solid #cbd5e1;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14.5px; font-weight: 800;">تحديث حالة الشحن:</h4>
+            <div style="flex: 1 1 300px; background: var(--surface); padding: 16px; border-radius: 8px; border: 1.5px solid var(--line);">
+                <h4 style="margin: 0 0 10px 0; font-size: 14.5px; font-weight: 800; color: var(--ink);">تحديث حالة الشحن:</h4>
                 
                 <div style="margin-bottom: 12px;">
                     <label style="display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 4px;">الحالة الجديدة:</label>
@@ -167,8 +167,8 @@ foreach ($allOrdersForCounts as $o) {
         </div>
 
         <!-- Scanned Order Lines Preview -->
-        <div style="margin-top: 14px; background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 12px;">
-            <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px;">🛍️ تفاصيل محتويات الشحنة:</div>
+        <div style="margin-top: 14px; background: var(--surface); border-radius: 8px; border: 1px solid var(--line); padding: 12px;">
+            <div style="font-weight: 800; font-size: 13px; margin-bottom: 8px; color: var(--ink);">🛍️ تفاصيل محتويات الشحنة:</div>
             <div id="scanned-items-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
         </div>
     </div>
@@ -177,9 +177,9 @@ foreach ($allOrdersForCounts as $o) {
 <!-- ========================================================================= -->
 <!--                         جدول شحنات وأوردرات الأونلاين                     -->
 <!-- ========================================================================= -->
-<div class="card" style="padding: 20px; background: #fff;">
+<div class="card" style="padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-size: 17px; font-weight: 800;">📋 سجل بوليصات الشحن (<?= count($orders) ?>)</h3>
+        <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: var(--ink);">📋 سجل بوليصات الشحن (<?= count($orders) ?>)</h3>
         
         <!-- Filter Form -->
         <form method="get" style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
@@ -218,7 +218,7 @@ foreach ($allOrdersForCounts as $o) {
         <div class="table-responsive">
             <table class="table" style="width: 100%; font-size: 13px;">
                 <thead>
-                    <tr style="background: #f8fafc;">
+                    <tr style="background: var(--surface-soft);">
                         <th>رقم الفاتورة / الباركود</th>
                         <th>المستلم / العميل</th>
                         <th>الهواتف</th>
@@ -248,7 +248,7 @@ foreach ($allOrdersForCounts as $o) {
                         <td style="font-family: monospace; direction: ltr; text-align: right;">
                             <div>📱 <?= e($ord['phone'] ?: ($ord['customer_phone'] ?? '-')) ?></div>
                             <?php if (!empty($ord['phone2'])): ?>
-                                <div style="color: #64748b; font-size: 11.5px;">📞 بديل: <?= e($ord['phone2']) ?></div>
+                                <div style="color: var(--muted); font-size: 11.5px;">📞 بديل: <?= e($ord['phone2']) ?></div>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -257,7 +257,7 @@ foreach ($allOrdersForCounts as $o) {
                                 <span style="font-weight: 600; font-size: 12px;"><?= e($ord['city']) ?></span>
                             <?php endif; ?>
                             <?php if (!empty($ord['street_address'])): ?>
-                                <div style="color: #64748b; font-size: 11px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= e($ord['street_address']) ?>">
+                                <div style="color: var(--muted); font-size: 11px; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?= e($ord['street_address']) ?>">
                                     <?= e($ord['street_address']) ?>
                                 </div>
                             <?php endif; ?>
@@ -274,7 +274,7 @@ foreach ($allOrdersForCounts as $o) {
                                 <?= e($badgeInfo['label']) ?>
                             </span>
                         </td>
-                        <td style="font-size: 11.5px; color: #64748b;">
+                        <td style="font-size: 11.5px; color: var(--muted);">
                             <?= date('d/m/Y h:i A', strtotime($ord['created_at'])) ?>
                         </td>
                         <td style="text-align: center; white-space: nowrap;">

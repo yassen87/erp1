@@ -30,11 +30,11 @@ $paymentMethodLabels = [
     gap: 15px;
 }
 .payroll-header {
-    background: linear-gradient(135deg, rgba(185, 132, 24, 0.08) 0%, rgba(111, 74, 8, 0.03) 100%);
-    border: 1px solid rgba(185, 132, 24, 0.25);
+    background: linear-gradient(135deg, rgba(185, 132, 24, 0.08) 0%, rgba(111, 74, 8, 0.03) 100%), var(--surface);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 16px 20px;
-    box-shadow: 0 6px 20px rgba(111, 74, 8, 0.03);
+    box-shadow: var(--shadow);
 }
 .payroll-header h2 {
     font-size: 20px;
@@ -48,8 +48,8 @@ $paymentMethodLabels = [
     margin: 0;
 }
 .tab-nav-panel {
-    background: #ffffff;
-    border: 1.5px solid rgba(192, 148, 53, 0.25);
+    background: var(--surface);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 12px 16px;
     display: flex;
@@ -78,8 +78,8 @@ $paymentMethodLabels = [
     background: var(--line);
 }
 .add-adj-panel {
-    background: #ffffff;
-    border: 1.5px solid rgba(192, 148, 53, 0.25);
+    background: var(--surface);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 16px;
     box-shadow: var(--shadow);
@@ -95,8 +95,8 @@ $paymentMethodLabels = [
     gap: 6px;
 }
 .payroll-table-panel {
-    background: #ffffff;
-    border: 1.5px solid rgba(192, 148, 53, 0.25);
+    background: var(--surface);
+    border: 1px solid var(--line);
     border-radius: 12px;
     padding: 16px;
     box-shadow: var(--shadow);
@@ -107,7 +107,7 @@ $paymentMethodLabels = [
     color: var(--ink);
     margin-top: 0;
     margin-bottom: 15px;
-    border-bottom: 2px solid var(--surface-soft);
+    border-bottom: 2px solid var(--line);
     padding-bottom: 10px;
 }
 .payroll-table {
@@ -130,10 +130,10 @@ $paymentMethodLabels = [
     transition: background 0.2s ease;
 }
 .payroll-table tbody tr:hover td {
-    background: rgba(185, 132, 24, 0.03);
+    background: var(--surface-soft);
 }
 .payroll-table tbody tr.active-row td {
-    background: rgba(185, 132, 24, 0.06);
+    background: rgba(214, 168, 68, 0.12);
 }
 .badge-attendance {
     background: #e0f2fe;
@@ -155,15 +155,55 @@ $paymentMethodLabels = [
     color: #b45309;
     border: 1px solid #fde68a;
 }
+.badge-bonus {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+.badge-deduction {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+:root[data-theme="dark"] .badge-attendance {
+    background: rgba(14, 165, 233, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.35);
+}
+:root[data-theme="dark"] .badge-delay {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
+:root[data-theme="dark"] .badge-status-paid {
+    background: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+:root[data-theme="dark"] .badge-status-unpaid {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+:root[data-theme="dark"] .badge-bonus {
+    background: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+:root[data-theme="dark"] .badge-deduction {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+}
 .detail-panel-wrapper {
-    background: #ffffff;
+    background: var(--surface);
     border: 1.5px solid var(--primary);
     border-top: 4px solid var(--primary);
     border-radius: 12px;
     padding: 20px;
     margin-top: -8px;
     margin-bottom: 15px;
-    box-shadow: 0 10px 25px rgba(111, 74, 8, 0.08);
+    box-shadow: var(--shadow);
     animation: slideDown 0.2s ease-out;
 }
 @keyframes slideDown {
@@ -429,7 +469,7 @@ $paymentMethodLabels = [
                         <?php foreach ($row['adjustments'] as $adj): ?>
                             <tr style="border-bottom:1px solid var(--line);">
                                 <td style="padding:6px;">
-                                    <span class="badge" style="background:<?= $adj['type'] === 'bonus' ? '#dcfce7' : '#fee2e2' ?>; color:<?= $adj['type'] === 'bonus' ? '#15803d' : '#b91c1c' ?>; border-color:transparent;">
+                                    <span class="badge <?= $adj['type'] === 'bonus' ? 'badge-bonus' : 'badge-deduction' ?>">
                                         <?= $adj['type'] === 'bonus' ? 'حافز' : 'خصم' ?>
                                     </span>
                                 </td>

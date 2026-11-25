@@ -1571,9 +1571,9 @@ option.low-stock {
                 </div>
 
                 <!-- بيانات الشحن وبوليصة الاستيكر (Online Shipping & Waybill) -->
-                <div class="online-shipping-box" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 12px; margin-top: 4px; margin-bottom: 6px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; margin-bottom: 8px;">
-                        <span style="font-weight: 800; font-size: 13px; color: #0f172a; display: flex; align-items: center; gap: 5px;">
+                <div class="online-shipping-box" style="background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 4px; margin-bottom: 6px; box-shadow: var(--shadow);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed var(--line); padding-bottom: 6px; margin-bottom: 8px;">
+                        <span style="font-weight: 800; font-size: 13px; color: var(--ink); display: flex; align-items: center; gap: 5px;">
                             <span>📦</span> بيانات بوليصة الشحن (الاستيكر)
                         </span>
                         <span class="badge info" style="font-size: 10.5px; font-weight: 700;">مطلوب للشحن</span>
@@ -1581,24 +1581,24 @@ option.low-stock {
 
                     <div style="display: grid; gap: 8px;">
                         <div>
-                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">اسم المستلم / العميل:</label>
+                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">اسم المستلم / العميل:</label>
                             <input type="text" name="recipient_name" id="shipping_recipient_name" placeholder="اسم العميل المستلم..." required style="height: 36px; font-size: 13px; font-weight: bold; width: 100%; border-radius: 6px;">
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">رقم التليفون الأساسي:</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">رقم التليفون الأساسي:</label>
                                 <input type="text" name="shipping_phone" id="shipping_phone" placeholder="01xxxxxxxxx" required style="height: 36px; font-size: 13px; font-family: monospace; direction: ltr; text-align: right; width: 100%; border-radius: 6px;">
                             </div>
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">رقم هاتف زيادة / بديل:</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">رقم هاتف زيادة / بديل:</label>
                                 <input type="text" name="shipping_phone2" id="shipping_phone2" placeholder="رقم بديل (مهم)" style="height: 36px; font-size: 13px; font-family: monospace; direction: ltr; text-align: right; width: 100%; border-radius: 6px;">
                             </div>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">المحافظة:</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">المحافظة:</label>
                                 <select name="shipping_governorate" id="shipping_governorate" required style="height: 36px; font-size: 12.5px; font-weight: bold; width: 100%; border-radius: 6px;">
                                     <option value="">-- اختر المحافظة --</option>
                                     <?php foreach ($governorates as $gov): ?>
@@ -1607,23 +1607,23 @@ option.low-stock {
                                 </select>
                             </div>
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">المركز / المنطقة / الحي:</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">المركز / المنطقة / الحي:</label>
                                 <input type="text" name="shipping_city" id="shipping_city" placeholder="مثال: الدقي / طنطا..." style="height: 36px; font-size: 12.5px; width: 100%; border-radius: 6px;">
                             </div>
                         </div>
 
                         <div>
-                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">الشارع والعنوان بالتفصيل:</label>
+                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">الشارع والعنوان بالتفصيل:</label>
                             <textarea name="shipping_address" id="shipping_address" rows="2" placeholder="اسم الشارع، رقم العمارة، الدور، الشقة، علامة مميزة..." required style="width: 100%; font-size: 12.5px; padding: 6px; border-radius: 6px;"></textarea>
                         </div>
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">تكلفة الشحن (ج.م):</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">تكلفة الشحن (ج.م):</label>
                                 <input type="number" step="any" min="0" name="shipping_cost" id="shipping_cost_input" value="0" placeholder="0" oninput="updateTotals()" style="height: 36px; font-size: 13px; font-weight: bold; text-align: center; width: 100%; border-radius: 6px;">
                             </div>
                             <div>
-                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">حالة الأوردر:</label>
+                                <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">حالة الأوردر:</label>
                                 <select name="shipping_status" id="shipping_status_select" style="height: 36px; font-size: 12px; font-weight: bold; width: 100%; border-radius: 6px;">
                                     <option value="preparing" selected>⏳ قيد التجهيز</option>
                                     <option value="shipped">🚚 تم الشحن مع المندوب</option>
@@ -1633,7 +1633,7 @@ option.low-stock {
                         </div>
 
                         <div>
-                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block;">ملاحظات الشحن والتوصيل للمندوب:</label>
+                            <label style="font-size: 11.5px; font-weight: 700; margin-bottom: 2px; display: block; color: var(--ink);">ملاحظات الشحن والتوصيل للمندوب:</label>
                             <input type="text" name="shipping_notes" id="shipping_notes" placeholder="ملاحظات للمندوب أو شركة الشحن..." style="height: 34px; font-size: 12px; width: 100%; border-radius: 6px;">
                         </div>
                     </div>
