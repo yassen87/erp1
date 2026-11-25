@@ -255,6 +255,8 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 'discount_type'        => (string)($inv['discount_type'] ?? ''),
                 'discount_value'       => (string)($inv['discount_value'] ?? 0),
                 'packer_name'          => (string)($inv['packer_name'] ?? ''),
+                'cashier_user_id'      => (string)($inv['cashier_user_id'] ?? ''),
+                'custom_cashier_name'  => (string)($inv['custom_cashier_name'] ?? ''),
                 'notes'                => (string)($inv['notes'] ?? ''),
                 'product_id'           => [],
                 'quantity'             => [],

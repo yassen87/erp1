@@ -2513,6 +2513,35 @@ function create_invoice(array $data, array $user): int
         $paid = min($total, (float) ($data['paid_total'] ?? 0));
         $due = $total - $paid;
         $notes = ($data['notes'] ?? '') ?: '';
+        $cashierUserId = (int) $user['id'];
+        if (!empty($data['cashier_user_id'])) {
+            if ($data['cashier_user_id'] === 'custom') {
+                if (!empty($data['custom_cashier_name'])) {
+                    $cName = trim((string)$data['custom_cashier_name']);
+                    $stmtUser = $db->prepare('SELECT id, name FROM users WHERE is_active = 1 AND (name = ? OR username = ?) LIMIT 1');
+                    $stmtUser->execute([$cName, $cName]);
+                    $foundUser = $stmtUser->fetch();
+                    if ($foundUser) {
+                        $cashierUserId = (int)$foundUser['id'];
+                    } else {
+                        $notes .= ($notes ? "\n" : "") . "الكاشير: " . $cName;
+                    }
+                }
+            } elseif ((int)$data['cashier_user_id'] > 0) {
+                $cashierUserId = (int)$data['cashier_user_id'];
+            }
+        } elseif (!empty($data['cashier_name'])) {
+            $cName = trim((string)$data['cashier_name']);
+            $stmtUser = $db->prepare('SELECT id, name FROM users WHERE is_active = 1 AND (name = ? OR username = ?) LIMIT 1');
+            $stmtUser->execute([$cName, $cName]);
+            $foundUser = $stmtUser->fetch();
+            if ($foundUser) {
+                $cashierUserId = (int)$foundUser['id'];
+            } else {
+                $notes .= ($notes ? "\n" : "") . "الكاشير: " . $cName;
+            }
+        }
+
         if (!empty($data['packer_name'])) {
             $notes .= ($notes ? "\n" : "") . "تم التقفيل بواسطة: " . trim($data['packer_name']);
         }
@@ -2595,7 +2624,7 @@ function create_invoice(array $data, array $user): int
         $stmt->execute([
             next_invoice_number($db, $locationId),
             $locationId,
-            (int) $user['id'],
+            $cashierUserId,
             $customerId,
             $subtotal,
             $discountType,
@@ -2672,7 +2701,7 @@ function create_invoice(array $data, array $user): int
         // Record exchange credit payment if applicable
         if ($creditPaid > 0) {
             $stmt = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'customer_credit', $creditPaid, (int) $user['id']]);
+            $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'customer_credit', $creditPaid, $cashierUserId]);
         }
 
         if ($paidFromUser > 0) {
@@ -2692,7 +2721,7 @@ function create_invoice(array $data, array $user): int
                 }
                 // تسجيل الدفعة كـ salary_deduction في جدول payments للربط بالفاتورة
                 $stmt = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'salary_deduction', $paidFromUser, (int) $user['id']]);
+                $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'salary_deduction', $paidFromUser, $cashierUserId]);
                 // إدراج خصم في جدول payroll_adjustments لشهر الفاتورة
                 $adjustmentMonth = date('Y-m');
                 $reason = 'خصم مشتريات فاتورة #' . $invoiceId . ' — بتاريخ ' . date('d/m/Y');
@@ -2715,15 +2744,15 @@ function create_invoice(array $data, array $user): int
                 
                 if ($actualCash > 0) {
                     $stmt = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-                    $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'cash', $actualCash, (int) $user['id']]);
+                    $stmt->execute([$invoiceId, $customerId, 'invoice_payment', 'cash', $actualCash, $cashierUserId]);
                 }
                 if ($actualSecondary > 0) {
                     $stmt = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-                    $stmt->execute([$invoiceId, $customerId, 'invoice_payment', $secondaryMethod, $actualSecondary, (int) $user['id']]);
+                    $stmt->execute([$invoiceId, $customerId, 'invoice_payment', $secondaryMethod, $actualSecondary, $cashierUserId]);
                 }
             } else {
                 $stmt = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by) VALUES (?, ?, ?, ?, ?, ?)');
-                $stmt->execute([$invoiceId, $customerId, 'invoice_payment', $paymentMethod, $paidFromUser, (int) $user['id']]);
+                $stmt->execute([$invoiceId, $customerId, 'invoice_payment', $paymentMethod, $paidFromUser, $cashierUserId]);
             }
         }
 

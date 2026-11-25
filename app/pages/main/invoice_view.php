@@ -167,6 +167,7 @@ $paymentTranslations = [
     </div>
     <div class="receipt-meta">
         <div><strong>رقم الفاتورة:</strong> <span><?= e($invoice['invoice_number']) ?></span></div>
+        <div><strong>الكاشير:</strong> <span><?= e($invoice['user_name']) ?></span></div>
         <div><strong>العميل:</strong> <span><?= e($invoice['customer_name'] ?: 'زبون عابر') ?></span></div>
         <?php if ($invoice['customer_phone']): ?><div><strong>الهاتف:</strong> <span><?= e($invoice['customer_phone']) ?></span></div><?php endif; ?>
     </div>

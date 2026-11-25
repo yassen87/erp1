@@ -55,6 +55,8 @@ $paymentDestinations = [
     'instapay' => payment_destination_label('instapay'),
     'vodafone_cash' => payment_destination_label('vodafone_cash'),
 ];
+$currentUser = current_user() ?? ($user ?? null);
+$allActiveUsers = pdo()->query("SELECT u.id, u.name, r.name AS role_name FROM users u JOIN roles r ON r.id = u.role_id WHERE u.is_active = 1 ORDER BY u.name ASC")->fetchAll();
 ?>
 <script>
     const formulaDefaults = <?= json_encode($defaults) ?>;
@@ -1636,9 +1638,23 @@ option.low-stock {
                         style="min-height: 50px; border-radius: 8px;"></textarea>
                 </label>
 
-                <label>اسم مقفل الأوردر (اختياري)
+                <label>اسم مقفل الفاتورة (اختياري)
                     <input name="packer_name" id="packer_name_input" type="text" placeholder="اسم الشخص الذي جهز الفاتورة...">
                 </label>
+
+                <label>اسم كاشير الفاتورة
+                    <select name="cashier_user_id" id="cashier_user_id_select" onchange="toggleCustomCashier(this.value)" style="font-weight: 700; border-radius: 8px;">
+                        <?php foreach ($allActiveUsers as $cUser): ?>
+                            <option value="<?= e($cUser['id']) ?>" data-name="<?= e($cUser['name']) ?>" <?= (int)$cUser['id'] === (int)($currentUser['id'] ?? 0) ? 'selected' : '' ?>>
+                                <?= e($cUser['name']) ?><?= !empty($cUser['role_name']) ? ' (' . e($cUser['role_name']) . ')' : '' ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <option value="custom">✏️ اسم كاشير آخر (كتابة يدوية)...</option>
+                    </select>
+                </label>
+                <div id="custom-cashier-box" style="display: none; margin-top: -4px; margin-bottom: 8px;">
+                    <input type="text" name="custom_cashier_name" id="custom_cashier_name_input" placeholder="اكتب اسم الكاشير يدوياً..." style="height: 38px; border-radius: 8px;">
+                </div>
 
                 <!-- Totals Section -->
                 <div class="receipt-box">
@@ -3480,6 +3496,20 @@ option.low-stock {
         recalculateTotals();
     }
 
+    function toggleCustomCashier(val) {
+        const box = document.getElementById('custom-cashier-box');
+        const input = document.getElementById('custom_cashier_name_input');
+        if (box) {
+            if (val === 'custom') {
+                box.style.display = 'block';
+                if (input) input.focus();
+            } else {
+                box.style.display = 'none';
+                if (input) input.value = '';
+            }
+        }
+    }
+
     function recalculateTotals() {
         let subtotal = 0;
 
@@ -4956,6 +4986,21 @@ function printOfflineReceipt(invoiceData, localId) {
     // رقم مؤقت مختصر
     const shortId = localId.replace('offline_', '').substring(0, 12);
 
+    // الكاشير والمقفل
+    let cashierName = invoiceData.cashier_name || '';
+    if (!cashierName && invoiceData.cashier_user_id) {
+        if (invoiceData.cashier_user_id === 'custom') {
+            cashierName = invoiceData.custom_cashier_name || '';
+        } else {
+            const cashierSelect = document.getElementById('cashier_user_id_select');
+            if (cashierSelect) {
+                const opt = cashierSelect.querySelector(`option[value="${invoiceData.cashier_user_id}"]`);
+                if (opt) cashierName = opt.getAttribute('data-name') || opt.text;
+            }
+        }
+    }
+    const packerName = invoiceData.packer_name || '';
+
     // ---- HTML مطابق للأونلاين ----
     const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -5105,6 +5150,8 @@ html, body {
     <!-- بيانات الفاتورة -->
     <div class="receipt-meta">
         <div><strong>رقم الفاتورة:</strong> <span>${shortId}</span></div>
+        ${cashierName ? `<div><strong>الكاشير:</strong> <span>${cashierName}</span></div>` : ''}
+        ${packerName ? `<div><strong>المقفل:</strong> <span>${packerName}</span></div>` : ''}
         <div><strong>العميل:</strong> <span>${customerName}</span></div>
     </div>
 
@@ -5224,6 +5271,9 @@ window.onload = function() {
         const discountValue = formData.get('discount_value') || '0';
         const notes = formData.get('notes') || '';
         const deductionUserId = formData.get('deduction_user_id') || '';
+        const packerName = formData.get('packer_name') || '';
+        const cashierUserId = formData.get('cashier_user_id') || '';
+        const customCashierName = formData.get('custom_cashier_name') || '';
         const paidCash = formData.get('paid_cash') || '0';
         const paidInstapay = formData.get('paid_instapay') || '0';
         const paidVodafoneCash = formData.get('paid_vodafone_cash') || '0';
@@ -5237,6 +5287,9 @@ window.onload = function() {
             discount_value:    parseFloat(discountValue) || 0,
             notes:             notes,
             deduction_user_id: deductionUserId,
+            packer_name:       packerName,
+            cashier_user_id:   cashierUserId,
+            custom_cashier_name: customCashierName,
             paid_cash:         parseFloat(paidCash) || 0,
             paid_instapay:     parseFloat(paidInstapay) || 0,
             paid_vodafone_cash:parseFloat(paidVodafoneCash) || 0,
