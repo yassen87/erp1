@@ -1,0 +1,18 @@
+{
+  "name": "كاشير حمزة للعطور (Hamza POS)",
+  "short_name": "حمزة كاشير",
+  "description": "تطبيق الكاشير السريع ونقاط البيع الأوفلاين لمحلات حمزة للعطور",
+  "start_url": "index.php?r=pos",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b0804",
+  "theme_color": "#c9a84c",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png"
+    }
+  ]
+}

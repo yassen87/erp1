@@ -797,6 +797,7 @@ async function processCheckout() {
     const paymentMethod = document.getElementById('payment_method_select').value;
     const notes = document.getElementById('invoice_notes').value;
     const packerName = document.getElementById('packer_name_input').value;
+    const cashierName = document.getElementById('cashier_name_input')?.value || '';
 
     const offlineUuid = generateUUID();
     const nowIso = new Date().toISOString();
@@ -822,6 +823,7 @@ async function processCheckout() {
         paid_secondary: paymentMethod.startsWith('mixed') ? parseFloat(document.getElementById('paid_secondary_input').value || 0) : 0,
         notes: notes,
         packer_name: packerName,
+        cashier_name: cashierName,
         items: cart.filter(c => c.type === 'product'),
         mixes: cart.filter(c => c.type === 'mix').map(c => c.mix_data),
         recipes: cart.filter(c => c.type === 'recipe'),
@@ -856,6 +858,7 @@ async function processCheckout() {
     cart = [];
     document.getElementById('invoice_notes').value = '';
     document.getElementById('packer_name_input').value = '';
+    if (document.getElementById('cashier_name_input')) document.getElementById('cashier_name_input').value = '';
     document.getElementById('invoice_discount_value').value = '';
     document.getElementById('paid_total_input').value = '';
     renderCart();
@@ -903,6 +906,8 @@ function generateReceiptHtml(inv, items) {
         <div style="font-size: 10.5px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 6px;">
             <div><strong>رقم الإيصال:</strong> ${inv.offline_number}</div>
             <div><strong>التاريخ:</strong> ${dateFormatted}</div>
+            ${inv.cashier_name ? `<div><strong>الكاشير:</strong> ${inv.cashier_name}</div>` : ''}
+            ${inv.packer_name ? `<div><strong>المقفل:</strong> ${inv.packer_name}</div>` : ''}
             <div><strong>العميل:</strong> ${inv.customer_name} ${inv.customer_phone ? '(' + inv.customer_phone + ')' : ''}</div>
             <div><strong>طريقة الدفع:</strong> ${inv.payment_method === 'cash' ? 'نقداً (كاش)' : inv.payment_method}</div>
         </div>

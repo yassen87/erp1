@@ -28,6 +28,8 @@ function render_login(): void
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="assets/style.css?v=<?= filemtime(__DIR__ . '/../assets/style.css') ?>">
+        <link rel="manifest" href="manifest.json">
+        <meta name="theme-color" content="#c9a84c">
         <script>
             const theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
@@ -98,7 +100,7 @@ function render_layout(string $route, array $user): void
         <script>
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/test/sw.js', { scope: '/test/' })
+                    navigator.serviceWorker.register('sw.js')
                         .then(function(reg) {
 
                             // Function to send POS page HTML snapshot to SW for caching

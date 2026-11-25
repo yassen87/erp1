@@ -276,6 +276,35 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 'offer_custom_data'    => [],
             ];
 
+            // 0. Raw cart array from offline POS queue
+            if (!empty($inv['cart']) && is_array($inv['cart'])) {
+                foreach ($inv['cart'] as $cItem) {
+                    $itemType = $cItem['type'] ?? 'product';
+                    if ($itemType === 'product') {
+                        $postData['product_id'][]          = (string)($cItem['id'] ?? 0);
+                        $postData['quantity'][]            = (string)($cItem['qty'] ?? 1);
+                        $postData['unit_price'][]          = (string)($cItem['price'] ?? 0);
+                        $postData['line_discount_type'][]  = (string)($cItem['discountType'] ?? '');
+                        $postData['line_discount_value'][] = (string)($cItem['discountValue'] ?? 0);
+                        $postData['is_gift'][]             = !empty($cItem['is_gift']) ? '1' : '0';
+                    } elseif ($itemType === 'custom_recipe') {
+                        $mixData = !empty($cItem['mix_data']) ? $cItem['mix_data'] : $cItem;
+                        $postData['mix_data'][] = is_string($mixData) ? $mixData : json_encode($mixData, JSON_UNESCAPED_UNICODE);
+                    } elseif ($itemType === 'recipe') {
+                        $postData['recipe_id'][]             = (string)($cItem['id'] ?? 0);
+                        $postData['recipe_bottle_id'][]      = (string)($cItem['bottle_id'] ?? 'default');
+                        $postData['recipe_without_bottle'][] = !empty($cItem['without_bottle']) ? '1' : '0';
+                        $postData['recipe_price'][]          = (string)($cItem['price'] ?? '');
+                        $postData['recipe_is_gift'][]        = !empty($cItem['is_gift']) ? '1' : '0';
+                    } elseif ($itemType === 'offer') {
+                        $postData['offer_id'][]          = (string)($cItem['id'] ?? 0);
+                        $postData['offer_qty'][]         = (string)($cItem['qty'] ?? 1);
+                        $postData['offer_price'][]       = (string)($cItem['price'] ?? '');
+                        $postData['offer_custom_data'][] = !empty($cItem['custom_data']) ? (is_string($cItem['custom_data']) ? $cItem['custom_data'] : json_encode($cItem['custom_data'], JSON_UNESCAPED_UNICODE)) : '';
+                    }
+                }
+            }
+
             // 1. Direct products
             if (!empty($inv['items']) && is_array($inv['items'])) {
                 foreach ($inv['items'] as $item) {
