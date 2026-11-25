@@ -10,6 +10,17 @@ require_once __DIR__ . '/navigation.php';
 
 function handle_ajax_requests(string $route): void
 {
+    // ===== CORS for Desktop POS Sync APIs =====
+    if (in_array($route, ['api_sync_ping', 'api_sync_login', 'api_sync_pull', 'api_sync_push'], true)) {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Accept, X-Sync-Token');
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
+            http_response_code(204);
+            exit;
+        }
+    }
+
     // ===== Offline Sync APIs =====
     if ($route === 'api_sync_ping') {
         header('Content-Type: application/json; charset=utf-8');
@@ -105,9 +116,10 @@ function handle_ajax_requests(string $route): void
         $raw = file_get_contents('php://input');
         $data = json_decode($raw, true) ?: $_POST;
 
-        $invoices = $data['invoices'] ?? [];
-        if (empty($invoices) || !is_array($invoices)) {
-            echo json_encode(['success' => true, 'synced_count' => 0, 'results' => [], 'message' => 'لا توجد فواتير للمزامنة']);
+        $customers = (isset($data['customers']) && is_array($data['customers'])) ? $data['customers'] : [];
+        $invoices  = (isset($data['invoices']) && is_array($data['invoices'])) ? $data['invoices'] : [];
+        if (empty($customers) && empty($invoices)) {
+            echo json_encode(['success' => true, 'synced_count' => 0, 'customers_synced_count' => 0, 'results' => [], 'customer_results' => [], 'message' => 'لا توجد بيانات للمزامنة'], JSON_UNESCAPED_UNICODE);
             exit;
         }
 
@@ -118,11 +130,14 @@ function handle_ajax_requests(string $route): void
         }
 
         try {
-            $result = process_pushed_offline_invoices($invoices, $user, $defaultLocationId);
-            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+            $custSync = $customers ? process_pushed_offline_customers($customers, $user, $defaultLocationId) : ['synced_count' => 0, 'results' => []];
+            $invSync  = $invoices ? process_pushed_offline_invoices($invoices, $user, $defaultLocationId) : ['success' => true, 'synced_count' => 0, 'errors_count' => 0, 'results' => []];
+            $invSync['customer_results'] = $custSync['results'];
+            $invSync['customers_synced_count'] = $custSync['synced_count'];
+            echo json_encode($invSync, JSON_UNESCAPED_UNICODE);
         } catch (Throwable $e) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
         }
         exit;
     }

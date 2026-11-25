@@ -111,7 +111,34 @@ class SyncEngine {
     }
 
     /**
-     * Master sync: Pushes pending invoices then pulls fresh catalog
+     * Authenticates with cloud ERP to get/refresh sync token
+     */
+    async login(username, password) {
+        const res = await fetch(`${this.serverUrl}/index.php?r=api_sync_login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data || !data.success || !data.token) {
+            throw new Error((data && data.message) || `HTTP ${res.status}`);
+        }
+
+        await this.setAuthToken(data.token);
+        const cashierName = (data.user && data.user.name) ? data.user.name : username;
+        await setSetting('saved_cashier_name', cashierName);
+        if (data.user && data.user.location_id) {
+            await setSetting('active_location_id', parseInt(data.user.location_id, 10));
+        }
+        return data;
+    }
+
+    /**
+     * Master sync: Pushes pending customers & invoices then pulls fresh catalog
      */
     async syncAll(manual = false) {
         if (this.isSyncing) return;
@@ -123,30 +150,37 @@ class SyncEngine {
             if (!isConnected) {
                 this.isSyncing = false;
                 const pendingCount = (await getAllFromStore('pending_invoices')).length;
-                this.notifyStatus({ 
-                    isOnline: false, 
-                    isSyncing: false, 
+                const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
+                this.notifyStatus({
+                    isOnline: false,
+                    isSyncing: false,
                     pendingCount,
-                    message: `أوفلاين (${pendingCount} فواتير بانتظار المزامنة)` 
+                    pendingCustomersCount,
+                    message: `أوفلاين (${pendingCount} فواتير بانتظار المزامنة)`
                 });
                 return;
             }
 
-            // 1. Push pending offline invoices
+            // 1. Push pending offline customers first so invoices get linked properly
+            await this.pushPendingCustomers();
+
+            // 2. Push pending offline invoices
             const pushResult = await this.pushPendingInvoices();
 
-            // 2. Pull latest catalog and stock for current branch
+            // 3. Pull latest catalog and stock for current branch
             const locationId = (await getSetting('active_location_id', 3)) || 3;
-            const pullResult = await this.pullCatalog(locationId);
+            await this.pullCatalog(locationId);
 
             const pendingCount = (await getAllFromStore('pending_invoices')).length;
+            const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
             this.isSyncing = false;
-            this.notifyStatus({ 
-                isOnline: true, 
-                isSyncing: false, 
+            this.notifyStatus({
+                isOnline: true,
+                isSyncing: false,
                 pendingCount,
+                pendingCustomersCount,
                 pushedCount: pushResult ? pushResult.synced_count : 0,
-                message: 'متصل بالسحابة — تم التحديث بنجاح' 
+                message: 'متصل بالسحابة — تم التحديث بنجاح'
             });
 
             if (manual && window.playBeep) {
@@ -157,13 +191,89 @@ class SyncEngine {
             console.error('Sync error:', err);
             this.isSyncing = false;
             const pendingCount = (await getAllFromStore('pending_invoices')).length;
-            this.notifyStatus({ 
-                isOnline: this.isOnline, 
-                isSyncing: false, 
+            const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
+            this.notifyStatus({
+                isOnline: this.isOnline,
+                isSyncing: false,
                 pendingCount,
-                message: 'حدث خطأ أثناء المزامنة: ' + err.message 
+                pendingCustomersCount,
+                message: 'حدث خطأ أثناء المزامنة: ' + err.message
             });
         }
+    }
+
+    /**
+     * Pushes standalone offline customers to cloud ERP before invoices
+     */
+    async pushPendingCustomers() {
+        const pendingCustomers = (await getSetting('pending_customers', [])) || [];
+        if (!pendingCustomers || pendingCustomers.length === 0) {
+            return { synced_count: 0 };
+        }
+
+        const token = await this.getAuthToken();
+        const locationId = (await getSetting('active_location_id', 3)) || 3;
+
+        const payload = {
+            token: token,
+            location_id: locationId,
+            customers: pendingCustomers
+        };
+
+        const res = await fetch(`${this.serverUrl}/index.php?r=api_sync_push`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            throw new Error(`Customer push failed with HTTP status ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.customer_results)) {
+            const syncedKeys = new Set();
+            const idMap = new Map();
+
+            for (const cr of data.customer_results) {
+                if ((cr.status === 'synced' || cr.status === 'matched') && cr.server_id) {
+                    if (cr.local_uuid) syncedKeys.add(String(cr.local_uuid));
+                    if (cr.local_id !== undefined && cr.local_id !== null) {
+                        idMap.set(String(cr.local_id), parseInt(cr.server_id, 10));
+                        if (Number(cr.local_id) !== Number(cr.server_id)) {
+                            await deleteFromStore('customers', cr.local_id).catch(() => {});
+                        }
+                    }
+                }
+            }
+
+            // Update any pending invoices referencing these local customer IDs
+            if (idMap.size > 0) {
+                const pendingInvs = await getAllFromStore('pending_invoices');
+                for (const inv of pendingInvs) {
+                    const localCid = inv.customer_local_id !== undefined && inv.customer_local_id !== null
+                        ? String(inv.customer_local_id)
+                        : '';
+                    if (localCid && idMap.has(localCid)) {
+                        inv.customer_id = idMap.get(localCid);
+                        inv.customer_is_local_new = false;
+                        await putInStore('pending_invoices', inv);
+                    }
+                }
+            }
+
+            const remaining = pendingCustomers.filter(c => {
+                const uuidMatch = c.local_uuid && syncedKeys.has(String(c.local_uuid));
+                const idMatch = c.id !== undefined && idMap.has(String(c.id));
+                return !uuidMatch && !idMatch;
+            });
+            await setSetting('pending_customers', remaining);
+        }
+
+        return data;
     }
 
     /**

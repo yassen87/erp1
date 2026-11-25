@@ -139,10 +139,11 @@ function get_sync_pull_data(int $locationId): array
     // 3. Customers
     $customers = array_map(function ($c) {
         return [
-            'id'    => (int)$c['id'],
-            'name'  => $c['name'],
-            'phone' => $c['phone'] ?? '',
-            'notes' => $c['notes'] ?? '',
+            'id'        => (int)$c['id'],
+            'name'      => $c['name'],
+            'phone'     => $c['phone'] ?? '',
+            'birthdate' => $c['birthdate'] ?? '',
+            'notes'     => $c['notes'] ?? '',
         ];
     }, all_customers());
 
@@ -173,6 +174,105 @@ function get_sync_pull_data(int $locationId): array
         'formula_defaults'     => $defaults,
         'payment_destinations' => $paymentDestinations,
         'app_name'             => APP_NAME,
+    ];
+}
+
+function normalize_sync_birthdate(?string $raw): ?string
+{
+    $bdate = trim((string)($raw ?? ''));
+    if ($bdate === '') {
+        return null;
+    }
+    if (preg_match('/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/', $bdate, $m)) {
+        $bdate = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+    }
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $bdate, $m)) {
+        return null;
+    }
+    if (!checkdate((int)$m[2], (int)$m[3], (int)$m[1])) {
+        return null;
+    }
+    return $bdate;
+}
+
+/**
+ * Processes offline customers pushed from the desktop app
+ */
+function process_pushed_offline_customers(array $customers, array $user, int $defaultLocationId): array
+{
+    ensure_sync_schema();
+    $db = pdo();
+    $results = [];
+    $syncedCount = 0;
+
+    foreach ($customers as $c) {
+        $localId = $c['local_id'] ?? $c['id'] ?? null;
+        $localUuid = trim((string)($c['local_uuid'] ?? ''));
+        $name = trim((string)($c['name'] ?? ''));
+        $phone = trim((string)($c['phone'] ?? ''));
+        $bdate = normalize_sync_birthdate(isset($c['birthdate']) ? (string)$c['birthdate'] : null);
+        $notes = trim((string)($c['notes'] ?? 'تمت الإضافة من كاشير سطح المكتب (أوفلاين)'));
+
+        if ($name === '') {
+            $results[] = [
+                'local_id'   => $localId,
+                'local_uuid' => $localUuid,
+                'status'     => 'error',
+                'message'    => 'اسم العميل مطلوب',
+            ];
+            continue;
+        }
+
+        $locationId = (int)($c['location_id'] ?? $defaultLocationId);
+        if ($locationId <= 0) {
+            $locationId = $defaultLocationId;
+        }
+
+        try {
+            if ($phone !== '') {
+                $stmtCust = $db->prepare('SELECT id, birthdate FROM customers WHERE phone = ? LIMIT 1');
+                $stmtCust->execute([$phone]);
+                $existing = $stmtCust->fetch();
+                if ($existing) {
+                    if ($bdate !== null && empty($existing['birthdate'])) {
+                        $db->prepare('UPDATE customers SET birthdate = ? WHERE id = ?')->execute([$bdate, (int)$existing['id']]);
+                    }
+                    $results[] = [
+                        'local_id'   => $localId,
+                        'local_uuid' => $localUuid,
+                        'server_id'  => (int)$existing['id'],
+                        'status'     => 'matched',
+                    ];
+                    $syncedCount++;
+                    continue;
+                }
+            }
+
+            $stmtNew = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source, notes) VALUES (?, ?, ?, ?, ?, "offline_pos", ?)');
+            $stmtNew->execute([$name, $phone !== '' ? $phone : null, $bdate, $locationId, (int)$user['id'], $notes ?: null]);
+            $serverId = (int)$db->lastInsertId();
+
+            $results[] = [
+                'local_id'   => $localId,
+                'local_uuid' => $localUuid,
+                'server_id'  => $serverId,
+                'status'     => 'synced',
+            ];
+            $syncedCount++;
+        } catch (Throwable $e) {
+            $results[] = [
+                'local_id'   => $localId,
+                'local_uuid' => $localUuid,
+                'status'     => 'error',
+                'message'    => $e->getMessage(),
+            ];
+        }
+    }
+
+    return [
+        'success'      => true,
+        'synced_count' => $syncedCount,
+        'results'      => $results,
     ];
 }
 
@@ -222,24 +322,38 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 $locationId = $defaultLocationId;
             }
 
-            // Customer handling: if customer_id not given or 0, check by phone or create new
+            // Customer handling: if customer_id not given, local temp, or missing on server, match by phone or create new
             $customerId = !empty($inv['customer_id']) ? (int)$inv['customer_id'] : null;
             $custPhone = trim((string)($inv['customer_phone'] ?? ''));
             $custName  = trim((string)($inv['customer_name'] ?? ''));
+            $custBirthdate = normalize_sync_birthdate(isset($inv['customer_birthdate']) ? (string)$inv['customer_birthdate'] : null);
 
-            if ((!$customerId || $customerId <= 0) && ($custPhone !== '' || $custName !== '')) {
+            if (!empty($inv['customer_is_local_new'])) {
+                $customerId = null;
+            } elseif ($customerId !== null && $customerId > 0) {
+                $stmtVerifyCust = $db->prepare('SELECT id FROM customers WHERE id = ? LIMIT 1');
+                $stmtVerifyCust->execute([$customerId]);
+                if (!$stmtVerifyCust->fetchColumn()) {
+                    $customerId = null;
+                }
+            }
+
+            if ((!$customerId || $customerId <= 0) && ($custPhone !== '' || ($custName !== '' && $custName !== 'زبون عابر'))) {
                 if ($custPhone !== '') {
                     $stmtCust = $db->prepare('SELECT id FROM customers WHERE phone = ? LIMIT 1');
                     $stmtCust->execute([$custPhone]);
                     $cRow = $stmtCust->fetch();
                     if ($cRow) {
                         $customerId = (int)$cRow['id'];
+                        if ($custBirthdate !== null) {
+                            $db->prepare('UPDATE customers SET birthdate = COALESCE(birthdate, ?) WHERE id = ?')->execute([$custBirthdate, $customerId]);
+                        }
                     }
                 }
-                if (!$customerId && $custName !== '') {
-                    // Create new customer record
-                    $stmtNewCust = $db->prepare('INSERT INTO customers (name, phone, location_id, created_by, source) VALUES (?, ?, ?, ?, "offline_pos")');
-                    $stmtNewCust->execute([$custName, $custPhone ?: null, $locationId, (int)$user['id']]);
+                if (!$customerId && $custName !== '' && ($custName !== 'زبون عابر' || $custPhone !== '')) {
+                    // Create new customer record (including birthdate)
+                    $stmtNewCust = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source) VALUES (?, ?, ?, ?, ?, "offline_pos")');
+                    $stmtNewCust->execute([$custName, $custPhone ?: null, $custBirthdate, $locationId, (int)$user['id']]);
                     $customerId = (int)$db->lastInsertId();
                 }
             }
@@ -256,6 +370,7 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 'discount_value'       => (string)($inv['discount_value'] ?? 0),
                 'packer_name'          => (string)($inv['packer_name'] ?? ''),
                 'cashier_user_id'      => (string)($inv['cashier_user_id'] ?? ''),
+                'cashier_name'         => (string)($inv['cashier_name'] ?? ''),
                 'custom_cashier_name'  => (string)($inv['custom_cashier_name'] ?? ''),
                 'notes'                => (string)($inv['notes'] ?? ''),
                 'product_id'           => [],

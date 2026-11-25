@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حمزة للعطور — كاشير ونظام الفروع المتكامل</title>
+    <title>حمزة للعطور — كاشير سطح المكتب (أوفلاين)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
         <div class="brand-section">
             <img src="logo.png" alt="حمزة للعطور" class="brand-logo">
             <div>
-                <div class="brand-title">حمزة للعطور — نظام الكاشير والفروع</div>
+                <div class="brand-title">حمزة للعطور — الكاشير ونقطة البيع</div>
                 <div class="brand-subtitle">يعمل أوفلاين 100% مع مزامنة سحابية فورية</div>
             </div>
         </div>
@@ -36,77 +36,6 @@
             </button>
         </div>
     </header>
-
-    <!-- All Website Pages Navigation Strip -->
-    <nav class="erp-nav-strip" id="erp-nav-strip">
-        <button type="button" class="erp-nav-pill pos-highlight active" onclick="switchMainView('pos', this)">
-            🛒 الكاشير ونقطة البيع (أوفلاين)
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('dashboard', this)">
-            📊 لوحة التحكم
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('products', this)">
-            📦 المنتجات والأسعار
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('branch_inventory', this)">
-            🏬 مخزون الفرع والجرد
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('transfers_branch', this)">
-            🔄 تحويلات الفروع
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('transfers_supply', this)">
-            🚚 أوامر التوريد
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('waste', this)">
-            🗑️ الهالك والتالف
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('customers', this)">
-            👥 العملاء والديون
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('shifts', this)">
-            ⏱️ تقفيل الشيفتات
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('expenses', this)">
-            💰 المصروفات والخزينة
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('reports_sales', this)">
-            📈 تقارير المبيعات
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('recipes', this)">
-            📜 التركيبات الجاهزة
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('formula_defaults', this)">
-            ⚖️ الجرامات الافتراضية
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('offers', this)">
-            🎁 العروض والباكدجات
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('customer_surveys', this)">
-            💬 استبيانات الرضا
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('customer_birthdays', this)">
-            🎂 أعياد الميلاد
-        </button>
-        <button type="button" class="erp-nav-pill" onclick="switchMainView('users', this)">
-            👤 المستخدمين
-        </button>
-    </nav>
-
-    <!-- Embedded Web ERP Frame Container (For browsing all website pages) -->
-    <div id="erp-frame-container" style="display: none;">
-        <div id="erp-offline-warning" class="erp-offline-banner" style="display: none;">
-            <div>
-                <strong style="color: var(--warning); font-size: 14px;">⚠️ أنت تعمل حالياً بدون اتصال إنترنت (أوفلاين)</strong>
-                <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">
-                    صفحات الإدارة والتقارير تحتاج إنترنت للتحديث المباشر. يمكنك استخدام <strong>الكاشير ونقطة البيع</strong> فهو يعمل 100% بدون إنترنت مع خصم المخزون فورياً.
-                </div>
-            </div>
-            <button type="button" class="btn primary" onclick="switchMainView('pos')" style="padding: 6px 14px; font-size: 12px;">
-                الرجوع للكاشير 🛒
-            </button>
-        </div>
-        <iframe id="erp-iframe" src="" loading="lazy"></iframe>
-    </div>
 
     <!-- Main Offline POS Container -->
     <main class="pos-layout" id="pos-view-container">
@@ -282,17 +211,23 @@
                 </h3>
 
                 <div style="display: grid; gap: 12px;">
-                    <!-- Customer Selector -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <!-- Customer Selector with Instant Search -->
+                    <div class="customer-search-box" id="customer-search-wrapper">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <label style="margin: 0;">العميل</label>
-                            <button type="button" class="btn secondary" onclick="openNewCustomerModal()" style="padding: 2px 8px; font-size: 11.5px; border-radius: 6px;">
+                            <button type="button" class="btn secondary" onclick="openNewCustomerModal()" style="padding: 3px 10px; font-size: 11.5px; border-radius: 6px;">
                                 + عميل جديد
                             </button>
                         </div>
-                        <select id="customer_id_select">
-                            <option value="">زبون عابر (نقدي)</option>
-                        </select>
+                        <input type="hidden" id="customer_id_select" value="">
+                        <div class="cust-search-input-wrap">
+                            <input type="text" id="customer_search_input" placeholder="🔍 ابحث باسم العميل أو رقم الهاتف..." autocomplete="off">
+                            <button type="button" id="customer_clear_btn" class="cust-clear-btn" onclick="clearSelectedCustomer()" title="إرجاع إلى زبون عابر" style="display: none;">✖</button>
+                        </div>
+                        <div id="customer_selected_badge" class="cust-selected-badge">
+                            👤 العميل الحالي: <strong id="customer_selected_label">زبون عابر (نقدي)</strong>
+                        </div>
+                        <div id="customer_search_results" class="cust-search-dropdown" style="display: none;"></div>
                     </div>
 
                     <!-- Payment Method -->
@@ -378,10 +313,13 @@
             <div class="modal-body">
                 <div style="display: grid; gap: 12px;">
                     <label>اسم العميل *
-                        <input type="text" id="new-cust-name" placeholder="الاسم ثلاثي أو ثنائي...">
+                        <input type="text" id="new-cust-name" placeholder="الاسم ثلاثي أو ثنائي..." onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewCustomer();}">
                     </label>
                     <label>رقم الهاتف
-                        <input type="tel" id="new-cust-phone" placeholder="01xxxxxxxxx">
+                        <input type="tel" id="new-cust-phone" placeholder="01xxxxxxxxx" onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewCustomer();}">
+                    </label>
+                    <label>تاريخ الميلاد (اختياري)
+                        <input type="date" id="new-cust-birthdate" style="direction: ltr; text-align: right;" onkeydown="if(event.key==='Enter'){event.preventDefault();saveNewCustomer();}">
                     </label>
                 </div>
             </div>
@@ -404,12 +342,21 @@
                     <label>رابط السيرفر السحابي (Cloud ERP URL)
                         <input type="url" id="settings-server-url" value="https://erp1.hamzaforperfumes.com" placeholder="https://erp1.hamzaforperfumes.com">
                     </label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label>اسم مستخدم الكاشير (للمزامنة)
+                            <input type="text" id="settings-username" placeholder="مثال: admin" autocomplete="off">
+                        </label>
+                        <label>كلمة المرور
+                            <input type="password" id="settings-password" placeholder="••••••••" autocomplete="off">
+                        </label>
+                    </div>
+                    <div id="settings-auth-status" style="font-size: 12px; color: var(--gold-light);"></div>
                     <div style="background: rgba(201, 168, 76, 0.08); border: 1px solid var(--line); border-radius: 10px; padding: 12px; font-size: 12.5px;">
                         <span style="font-weight: 800; color: var(--gold-light);">💡 كيف تعمل المزامنة:</span>
                         <ul style="margin-right: 18px; margin-top: 6px; line-height: 1.8; color: var(--ink-muted);">
                             <li>البرنامج يحفظ كل الفواتير محلياً في جهاز الكمبيوتر فورياً وبدون تأخير.</li>
                             <li>عند توفر الإنترنت، يقوم البرنامج تلقائياً بإرسال الفواتير للسيرفر السحابي وتحديث المخزون.</li>
-                            <li>تم تزويد الكاشير بكافة الأصناف والعملاء مسبقاً (592 صنف و 2,018 عميل) ليعمل مباشرة.</li>
+                            <li>تم تزويد الكاشير بكافة الأصناف والعملاء مسبقاً ليعمل مباشرة حتى بدون إنترنت.</li>
                         </ul>
                     </div>
                 </div>

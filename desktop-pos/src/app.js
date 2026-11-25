@@ -74,6 +74,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Load active location
     activeLocationId = parseInt(await getSetting('active_location_id', 3), 10) || 3;
 
+    // Prefill saved cashier name if configured
+    const savedCashierName = await getSetting('saved_cashier_name', '');
+    const cashierInput = document.getElementById('cashier_name_input');
+    if (cashierInput && savedCashierName && !cashierInput.value) {
+        cashierInput.value = savedCashierName;
+    }
+
     // Load local catalog
     await reloadLocalData();
 
@@ -84,9 +91,23 @@ window.addEventListener('DOMContentLoaded', async () => {
         barcodeInput.addEventListener('keydown', handleBarcodeKeydown);
     }
 
-    // Keep barcode focused on idle
+    // Setup Customer Search Picker
+    initCustomerSearchPicker();
+
+    // Keep barcode focused on idle, close customer dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('input') && !e.target.closest('select') && !e.target.closest('textarea') && !e.target.closest('button')) {
+        if (!e.target.closest('.customer-search-box')) {
+            const dropdown = document.getElementById('customer_search_results');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+        if (
+            !e.target.closest('input') &&
+            !e.target.closest('select') &&
+            !e.target.closest('textarea') &&
+            !e.target.closest('button') &&
+            !e.target.closest('.customer-search-box') &&
+            !e.target.closest('.modal-overlay')
+        ) {
             if (barcodeInput) barcodeInput.focus();
         }
     });
@@ -96,46 +117,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         window.syncEngine.syncAll();
     }
 });
-
-// Switch between Offline POS and live ERP website pages
-function switchMainView(route, btnEl) {
-    const posView = document.getElementById('pos-view-container');
-    const erpView = document.getElementById('erp-frame-container');
-    const erpIframe = document.getElementById('erp-iframe');
-    const erpWarning = document.getElementById('erp-offline-warning');
-    const pills = document.querySelectorAll('.erp-nav-pill');
-
-    pills.forEach(p => p.classList.remove('active'));
-    if (btnEl) {
-        btnEl.classList.add('active');
-    } else {
-        const firstPill = document.querySelector('.erp-nav-pill');
-        if (firstPill && route === 'pos') firstPill.classList.add('active');
-    }
-
-    if (route === 'pos') {
-        erpView.style.display = 'none';
-        posView.style.display = 'grid';
-        const barcodeInput = document.getElementById('barcode-input');
-        if (barcodeInput) barcodeInput.focus();
-    } else {
-        posView.style.display = 'none';
-        erpView.style.display = 'flex';
-
-        if (!window.syncEngine.isOnline) {
-            erpWarning.style.display = 'flex';
-        } else {
-            erpWarning.style.display = 'none';
-        }
-
-        const targetUrl = `${window.syncEngine.serverUrl}/index.php?r=${route}`;
-        if (erpIframe.src !== targetUrl) {
-            erpIframe.src = targetUrl;
-        }
-    }
-}
-window.switchMainView = switchMainView;
-
 
 // Update Header Sync Badge
 function updateSyncBadge(info) {
@@ -149,11 +130,17 @@ function updateSyncBadge(info) {
         text.innerText = info.message || 'جاري المزامنة...';
     } else if (info.isOnline) {
         badge.classList.add('online');
-        const pendingMsg = info.pendingCount > 0 ? ` (${info.pendingCount} معلقة)` : '';
+        const pendingParts = [];
+        if (info.pendingCount > 0) pendingParts.push(`${info.pendingCount} فواتير`);
+        if (info.pendingCustomersCount > 0) pendingParts.push(`${info.pendingCustomersCount} عملاء`);
+        const pendingMsg = pendingParts.length > 0 ? ` (${pendingParts.join(' و ')} معلقة)` : '';
         text.innerText = `متصل بالسحابة${pendingMsg}`;
     } else {
         badge.classList.add('offline');
-        const pendingMsg = info.pendingCount !== undefined ? ` (${info.pendingCount} فواتير معلقة)` : '';
+        const pendingParts = [];
+        if (info.pendingCount > 0) pendingParts.push(`${info.pendingCount} فواتير`);
+        if (info.pendingCustomersCount > 0) pendingParts.push(`${info.pendingCustomersCount} عملاء`);
+        const pendingMsg = pendingParts.length > 0 ? ` (${pendingParts.join(' و ')} معلقة)` : '';
         text.innerText = `أوفلاين${pendingMsg}`;
     }
 }
@@ -233,21 +220,224 @@ function renderDirectProductsDropdown() {
     }
 }
 
-// Render Customers in Dropdown
+let customerSearchHighlightIdx = -1;
+
+function normalizeArabicText(str) {
+    return String(str || '')
+        .replace(/[\u064B-\u065F\u0670]/g, '')
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .toLowerCase()
+        .trim();
+}
+
+function initCustomerSearchPicker() {
+    const searchInput = document.getElementById('customer_search_input');
+    const dropdown = document.getElementById('customer_search_results');
+    if (!searchInput || !dropdown) return;
+
+    searchInput.addEventListener('focus', () => {
+        renderCustomerSearchResults(searchInput.value);
+    });
+
+    searchInput.addEventListener('input', () => {
+        customerSearchHighlightIdx = -1;
+        renderCustomerSearchResults(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.cust-search-item');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (dropdown.style.display === 'none') {
+                renderCustomerSearchResults(searchInput.value);
+                return;
+            }
+            if (items.length > 0) {
+                customerSearchHighlightIdx = Math.min(customerSearchHighlightIdx + 1, items.length - 1);
+                updateCustomerSearchHighlight(items);
+            }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (items.length > 0) {
+                customerSearchHighlightIdx = Math.max(customerSearchHighlightIdx - 1, 0);
+                updateCustomerSearchHighlight(items);
+            }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (dropdown.style.display !== 'none' && items.length > 0) {
+                const targetIdx = customerSearchHighlightIdx >= 0 ? customerSearchHighlightIdx : 0;
+                if (items[targetIdx]) items[targetIdx].click();
+            } else {
+                renderCustomerSearchResults(searchInput.value);
+            }
+        } else if (e.key === 'Escape') {
+            dropdown.style.display = 'none';
+            customerSearchHighlightIdx = -1;
+        }
+    });
+}
+
+function updateCustomerSearchHighlight(items) {
+    items.forEach((el, idx) => {
+        if (idx === customerSearchHighlightIdx) {
+            el.classList.add('active');
+            el.scrollIntoView({ block: 'nearest' });
+        } else {
+            el.classList.remove('active');
+        }
+    });
+}
+
+// Refresh selected customer badge & open dropdown if visible
 function renderCustomersDropdown() {
-    const select = document.getElementById('customer_id_select');
-    if (!select) return;
+    const hiddenInput = document.getElementById('customer_id_select');
+    const labelEl = document.getElementById('customer_selected_label');
+    const badgeEl = document.getElementById('customer_selected_badge');
+    const clearBtn = document.getElementById('customer_clear_btn');
+    if (!hiddenInput) return;
 
-    const currentVal = select.value;
-    select.innerHTML = '<option value="">زبون عابر (نقدي)</option>';
-
-    for (const c of allCustomers) {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.innerText = `${c.name} - ${c.phone || 'بدون هاتف'}`;
-        select.appendChild(opt);
+    const currentVal = hiddenInput.value;
+    if (currentVal) {
+        const found = allCustomers.find(c => String(c.id) === String(currentVal));
+        if (found) {
+            if (labelEl) {
+                labelEl.textContent = `${found.name}${found.phone ? ' (' + found.phone + ')' : ''}`;
+            }
+            if (badgeEl) badgeEl.classList.add('has-customer');
+            if (clearBtn) clearBtn.style.display = 'flex';
+        }
+    } else {
+        if (labelEl) labelEl.textContent = 'زبون عابر (نقدي)';
+        if (badgeEl) badgeEl.classList.remove('has-customer');
+        if (clearBtn) clearBtn.style.display = 'none';
     }
-    if (currentVal) select.value = currentVal;
+
+    const dropdown = document.getElementById('customer_search_results');
+    const searchInput = document.getElementById('customer_search_input');
+    if (dropdown && dropdown.style.display !== 'none' && searchInput) {
+        renderCustomerSearchResults(searchInput.value);
+    }
+}
+
+function renderCustomerSearchResults(query = '') {
+    const dropdown = document.getElementById('customer_search_results');
+    if (!dropdown) return;
+
+    const rawQuery = String(query || '').trim();
+    const normQuery = normalizeArabicText(rawQuery);
+    const digitsQuery = rawQuery.replace(/\D+/g, '');
+
+    dropdown.innerHTML = '';
+
+    // Show walk-in option at top when query is empty
+    if (rawQuery === '') {
+        const walkInEl = document.createElement('div');
+        walkInEl.className = 'cust-search-item';
+        const leftSpan = document.createElement('span');
+        leftSpan.textContent = '🚶 زبون عابر (نقدي)';
+        const rightSpan = document.createElement('span');
+        rightSpan.style.cssText = 'font-size: 11px; color: var(--ink-muted);';
+        rightSpan.textContent = 'افتراضي';
+        walkInEl.appendChild(leftSpan);
+        walkInEl.appendChild(rightSpan);
+        walkInEl.addEventListener('click', () => clearSelectedCustomer());
+        dropdown.appendChild(walkInEl);
+    }
+
+    let matches = allCustomers;
+    if (normQuery !== '') {
+        matches = allCustomers.filter(c => {
+            const normName = normalizeArabicText(c.name);
+            const rawPhone = String(c.phone || '');
+            const cleanPhone = rawPhone.replace(/\D+/g, '');
+            if (normName.includes(normQuery)) return true;
+            if (rawPhone.includes(rawQuery)) return true;
+            if (digitsQuery !== '' && cleanPhone.includes(digitsQuery)) return true;
+            return false;
+        });
+    }
+
+    const limitedMatches = matches.slice(0, 50);
+    for (const c of limitedMatches) {
+        const item = document.createElement('div');
+        item.className = 'cust-search-item';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.style.fontWeight = '700';
+        nameSpan.textContent = `${c.name}${c.birthdate ? ' 🎂' : ''}${c.is_local_new ? ' (جديد أوفلاين)' : ''}`;
+
+        const phoneSpan = document.createElement('span');
+        phoneSpan.style.cssText = 'font-size: 11.5px; color: var(--gold-light); direction: ltr;';
+        phoneSpan.textContent = c.phone || 'بدون هاتف';
+
+        item.appendChild(nameSpan);
+        item.appendChild(phoneSpan);
+        item.addEventListener('click', () => selectCustomer(c.id));
+        dropdown.appendChild(item);
+    }
+
+    if (rawQuery !== '') {
+        const addEl = document.createElement('div');
+        addEl.className = 'cust-search-item cust-add-action';
+        addEl.textContent = `➕ إضافة عميل جديد: "${rawQuery}"`;
+        addEl.addEventListener('click', () => {
+            dropdown.style.display = 'none';
+            openNewCustomerModal(rawQuery);
+        });
+        dropdown.appendChild(addEl);
+    } else if (limitedMatches.length === 0) {
+        const emptyEl = document.createElement('div');
+        emptyEl.style.cssText = 'padding: 12px; text-align: center; font-size: 12px; color: var(--ink-muted);';
+        emptyEl.textContent = 'لا يوجد عملاء مسجلون بعد';
+        dropdown.appendChild(emptyEl);
+    }
+
+    dropdown.style.display = 'block';
+    customerSearchHighlightIdx = -1;
+}
+
+function selectCustomer(custId) {
+    const hiddenInput = document.getElementById('customer_id_select');
+    const searchInput = document.getElementById('customer_search_input');
+    const dropdown = document.getElementById('customer_search_results');
+    const labelEl = document.getElementById('customer_selected_label');
+    const badgeEl = document.getElementById('customer_selected_badge');
+    const clearBtn = document.getElementById('customer_clear_btn');
+
+    const found = allCustomers.find(c => String(c.id) === String(custId));
+    if (!found) {
+        clearSelectedCustomer();
+        return;
+    }
+
+    if (hiddenInput) hiddenInput.value = String(found.id);
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+    if (labelEl) {
+        labelEl.textContent = `${found.name}${found.phone ? ' (' + found.phone + ')' : ''}${found.birthdate ? ' 🎂' : ''}`;
+    }
+    if (badgeEl) badgeEl.classList.add('has-customer');
+    if (clearBtn) clearBtn.style.display = 'flex';
+    customerSearchHighlightIdx = -1;
+}
+
+function clearSelectedCustomer() {
+    const hiddenInput = document.getElementById('customer_id_select');
+    const searchInput = document.getElementById('customer_search_input');
+    const dropdown = document.getElementById('customer_search_results');
+    const labelEl = document.getElementById('customer_selected_label');
+    const badgeEl = document.getElementById('customer_selected_badge');
+    const clearBtn = document.getElementById('customer_clear_btn');
+
+    if (hiddenInput) hiddenInput.value = '';
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+    if (labelEl) labelEl.textContent = 'زبون عابر (نقدي)';
+    if (badgeEl) badgeEl.classList.remove('has-customer');
+    if (clearBtn) clearBtn.style.display = 'none';
+    customerSearchHighlightIdx = -1;
 }
 
 // Render Recipes in Dropdown
@@ -718,9 +908,33 @@ function switchTab(tabId) {
 }
 
 // ===== Quick Add Customer Modal =====
-function openNewCustomerModal() {
-    document.getElementById('modal-new-customer').style.display = 'flex';
-    document.getElementById('new-cust-name').focus();
+function openNewCustomerModal(prefill = '') {
+    const modal = document.getElementById('modal-new-customer');
+    const nameInput = document.getElementById('new-cust-name');
+    const phoneInput = document.getElementById('new-cust-phone');
+    const bdateInput = document.getElementById('new-cust-birthdate');
+
+    if (nameInput) nameInput.value = '';
+    if (phoneInput) phoneInput.value = '';
+    if (bdateInput) bdateInput.value = '';
+
+    const cleanPrefill = String(prefill || '').trim();
+    if (cleanPrefill) {
+        if (/^[0-9+\s-]{5,}$/.test(cleanPrefill)) {
+            if (phoneInput) phoneInput.value = cleanPrefill;
+        } else {
+            if (nameInput) nameInput.value = cleanPrefill;
+        }
+    }
+
+    if (modal) modal.style.display = 'flex';
+    if (cleanPrefill && /^[0-9+\s-]{5,}$/.test(cleanPrefill)) {
+        if (nameInput) nameInput.focus();
+    } else if (cleanPrefill) {
+        if (phoneInput) phoneInput.focus();
+    } else if (nameInput) {
+        nameInput.focus();
+    }
 }
 
 function closeNewCustomerModal() {
@@ -730,29 +944,46 @@ function closeNewCustomerModal() {
 async function saveNewCustomer() {
     const name = document.getElementById('new-cust-name').value.trim();
     const phone = document.getElementById('new-cust-phone').value.trim();
+    const birthdate = (document.getElementById('new-cust-birthdate')?.value || '').trim();
 
     if (!name) {
         alert('يرجى إدخال اسم العميل');
         return;
     }
 
+    const localUuid = 'cust_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
     const newCust = {
         name,
         phone,
-        notes: 'تمت الإضافة من كاشير سطح المكتب (أوفلاين)'
+        birthdate: birthdate || '',
+        notes: 'تمت الإضافة من كاشير سطح المكتب (أوفلاين)',
+        is_local_new: true,
+        local_uuid: localUuid
     };
 
     const id = await putInStore('customers', newCust);
     newCust.id = id;
     allCustomers.push(newCust);
+    allCustomers.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'));
+
+    // Queue for cloud sync when internet returns
+    const pendingCusts = (await getSetting('pending_customers', [])) || [];
+    pendingCusts.push({ ...newCust });
+    await setSetting('pending_customers', pendingCusts);
 
     renderCustomersDropdown();
-    document.getElementById('customer_id_select').value = id;
+    selectCustomer(id);
 
     closeNewCustomerModal();
     document.getElementById('new-cust-name').value = '';
     document.getElementById('new-cust-phone').value = '';
+    if (document.getElementById('new-cust-birthdate')) {
+        document.getElementById('new-cust-birthdate').value = '';
+    }
     playBeep('success');
+
+    // Sync immediately if online
+    window.syncEngine.syncAll();
 }
 
 // ===== Checkout Flow & Offline Invoice Creation =====
@@ -763,12 +994,14 @@ async function processCheckout() {
     }
 
     const custSelect = document.getElementById('customer_id_select');
-    const custId = parseInt(custSelect.value, 10) || null;
+    const custVal = custSelect ? custSelect.value : '';
+    const custId = parseInt(custVal, 10) || null;
+    let foundCust = null;
     let custName = 'زبون عابر';
     let custPhone = '';
 
-    if (custId) {
-        const foundCust = allCustomers.find(c => c.id === custId);
+    if (custVal) {
+        foundCust = allCustomers.find(c => String(c.id) === String(custVal)) || null;
         if (foundCust) {
             custName = foundCust.name;
             custPhone = foundCust.phone || '';
@@ -793,7 +1026,13 @@ async function processCheckout() {
     invoiceDiscount = Math.min(subtotal, invoiceDiscount);
 
     const total = Math.max(0, subtotal - invoiceDiscount);
-    const paidInput = parseFloat(document.getElementById('paid_total_input').value || total);
+    const paidRaw = document.getElementById('paid_total_input').value;
+    const paidInput = paidRaw !== '' ? parseFloat(paidRaw) : total;
+    if ((total - paidInput) > 0.01 && !foundCust) {
+        alert('يجب اختيار عميل أو إضافة عميل جديد عند وجود متبقي (دين) على الفاتورة!');
+        return;
+    }
+
     const paymentMethod = document.getElementById('payment_method_select').value;
     const notes = document.getElementById('invoice_notes').value;
     const packerName = document.getElementById('packer_name_input').value;
@@ -809,9 +1048,12 @@ async function processCheckout() {
         offline_number: offlineInvNumber,
         created_at: nowIso,
         location_id: activeLocationId,
-        customer_id: custId,
+        customer_id: (foundCust && !foundCust.is_local_new) ? (parseInt(foundCust.id, 10) || 0) : 0,
+        customer_local_id: foundCust ? foundCust.id : null,
         customer_name: custName,
         customer_phone: custPhone,
+        customer_birthdate: foundCust ? (foundCust.birthdate || '') : '',
+        customer_is_local_new: !!(foundCust && foundCust.is_local_new),
         payment_method: paymentMethod,
         subtotal: subtotal,
         discount_type: discountType,
@@ -819,8 +1061,8 @@ async function processCheckout() {
         discount_amount: invoiceDiscount,
         total: total,
         paid_total: paidInput,
-        paid_cash: paymentMethod === 'cash' ? paidInput : (paymentMethod.startsWith('mixed') ? parseFloat(document.getElementById('paid_cash_input').value || 0) : 0),
-        paid_secondary: paymentMethod.startsWith('mixed') ? parseFloat(document.getElementById('paid_secondary_input').value || 0) : 0,
+        paid_cash: paymentMethod === 'cash' ? paidInput : (paymentMethod.startsWith('mixed') ? parseFloat(document.getElementById('paid_cash_input')?.value || 0) : 0),
+        paid_secondary: paymentMethod.startsWith('mixed') ? parseFloat(document.getElementById('paid_secondary_input')?.value || 0) : 0,
         notes: notes,
         packer_name: packerName,
         cashier_name: cashierName,
@@ -854,13 +1096,17 @@ async function processCheckout() {
     // 3. Print 80mm thermal receipt
     printThermalReceipt(offlineInvoice, cart);
 
-    // 4. Reset Cart
+    // 4. Reset Cart & Checkout Inputs
     cart = [];
     document.getElementById('invoice_notes').value = '';
     document.getElementById('packer_name_input').value = '';
-    if (document.getElementById('cashier_name_input')) document.getElementById('cashier_name_input').value = '';
+    const savedCashierName = await getSetting('saved_cashier_name', '');
+    if (document.getElementById('cashier_name_input')) {
+        document.getElementById('cashier_name_input').value = savedCashierName || cashierName || '';
+    }
     document.getElementById('invoice_discount_value').value = '';
     document.getElementById('paid_total_input').value = '';
+    clearSelectedCustomer();
     renderCart();
 
     // 5. Trigger sync in background if online
@@ -964,10 +1210,22 @@ function generateReceiptHtml(inv, items) {
 }
 
 // ===== Settings & Sync Modal =====
-function openSettingsModal() {
+async function openSettingsModal() {
     const input = document.getElementById('settings-server-url');
     if (input) {
         input.value = window.syncEngine.serverUrl;
+    }
+    const statusEl = document.getElementById('settings-auth-status');
+    if (statusEl) {
+        const token = await window.syncEngine.getAuthToken();
+        const savedCashier = await getSetting('saved_cashier_name', '');
+        if (token) {
+            statusEl.style.color = '#34D399';
+            statusEl.textContent = `✅ الحساب مربوط للمزامنة التلقائية${savedCashier ? ' (' + savedCashier + ')' : ''}`;
+        } else {
+            statusEl.style.color = '#FBBF24';
+            statusEl.textContent = '⚠️ أدخل اسم المستخدم وكلمة المرور لربط المزامنة مع السيرفر السحابي';
+        }
     }
     document.getElementById('modal-settings').style.display = 'flex';
 }
@@ -981,6 +1239,33 @@ async function saveSettingsFromModal() {
     if (input && input.value) {
         window.syncEngine.setServerUrl(input.value.trim());
     }
+
+    const username = (document.getElementById('settings-username')?.value || '').trim();
+    const password = document.getElementById('settings-password')?.value || '';
+    const statusEl = document.getElementById('settings-auth-status');
+
+    if (username && password) {
+        try {
+            const loginRes = await window.syncEngine.login(username, password);
+            if (loginRes && loginRes.success) {
+                const cashierInput = document.getElementById('cashier_name_input');
+                if (cashierInput && loginRes.user?.name) {
+                    cashierInput.value = loginRes.user.name;
+                }
+                if (document.getElementById('settings-password')) {
+                    document.getElementById('settings-password').value = '';
+                }
+            }
+        } catch (err) {
+            if (statusEl) {
+                statusEl.style.color = '#EF4444';
+                statusEl.textContent = '❌ فشل تسجيل الدخول للمزامنة: ' + err.message;
+            }
+            alert('تعذر تسجيل الدخول للمزامنة: ' + err.message);
+            return;
+        }
+    }
+
     closeSettingsModal();
     window.syncEngine.syncAll(true);
 }
