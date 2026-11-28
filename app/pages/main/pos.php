@@ -1093,20 +1093,6 @@ option.low-stock {
         <h2>شاشة البيع والكاشير POS</h2>
         <p>إدارة المبيعات الفورية، والتركيبات الفورية والوصفات الجاهزة مع احتساب فوري للقيم والخصومات.</p>
     </div>
-    <!-- احتفالية نصر 6 أكتوبر المجيد 1973 دون التأثير على ديزاين الكاشير -->
-    <div class="october-pos-badge" onclick="openOctoberModal()" title="انقر لتكبير بوستر نصر 6 أكتوبر التذكاري">
-        <div class="october-thumb-box">
-            <img src="assets/october_victory.jpg" alt="نصر أكتوبر" class="october-thumb-img">
-        </div>
-        <div class="october-badge-text">
-            <div class="october-badge-title">
-                <span>🇪🇬 الذكرى الـ 53 لنصر أكتوبر المجيد</span>
-            </div>
-            <div class="october-badge-sub">
-                حرب أكتوبر 1973 - فخر العزة والكرامة <span class="october-zoom-btn">🔍 عرض</span>
-            </div>
-        </div>
-    </div>
 </section>
 
 <!-- Branch Selection Bar -->
@@ -5947,50 +5933,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-// التحكم في نافذة بوستر نصر 6 أكتوبر
-function openOctoberModal() {
-    const modal = document.getElementById('october-modal');
-    if (modal) {
-        modal.classList.add('show');
-    }
-}
-
-function closeOctoberModal() {
-    const modal = document.getElementById('october-modal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-}
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeOctoberModal();
-    }
-});
 </script>
-
-<!-- Modal بوستر نصر 6 أكتوبر التذكاري المجيد -->
-<div id="october-modal" class="october-modal" onclick="if(event.target === this) closeOctoberModal();">
-    <div class="october-modal-card">
-        <div class="october-modal-header">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 26px;">🇪🇬</span>
-                <div style="text-align: right;">
-                    <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #fff;">الذكرى الـ 53 - حرب أكتوبر 1973</h3>
-                    <p style="margin: 2px 0 0; font-size: 11.5px; color: #cbd5e1;">يوم العزة والكرامة والشجاعة المصرية الخالدة</p>
-                </div>
-            </div>
-            <button type="button" class="october-modal-close" onclick="closeOctoberModal()" title="إغلاق">&times;</button>
-        </div>
-        <div class="october-modal-body">
-            <img src="assets/october_victory.jpg" alt="حرب أكتوبر 1973" class="october-full-img">
-        </div>
-        <div class="october-modal-footer">
-            <span>🇪🇬 كل عام ومصر وقواتنا المسلحة الباسلة وشعبنا العظيم بخير وعزة ونصر دائماً 🌟</span>
-            <button type="button" class="btn small primary" onclick="closeOctoberModal()">إغلاق ومتابعة الكاشير</button>
-        </div>
-    </div>
-</div>
 
 
 
