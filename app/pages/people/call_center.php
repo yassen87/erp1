@@ -282,10 +282,22 @@ if ($search !== '') {
         <button type="button" class="cc-btn" onclick="toggleDialpad()" style="background: rgba(201,168,76,0.15); color: var(--gold-dark); border: 1.5px solid var(--gold);">
             📱 لوحة الاتصال الرقمية
         </button>
+        <button type="button" class="cc-btn" onclick="ERPCallAlarms && ERPCallAlarms.testSound()" style="background: rgba(245,158,11,0.15); color: #b45309; border: 1.5px solid rgba(245,158,11,0.45);">
+            🔔 تجربة وتفعيل المنبه
+        </button>
         <a href="index.php?r=customer_todo" class="cc-btn cc-btn-primary">
             📋 قائمة المهام (To-Do List)
         </a>
     </div>
+</div>
+
+<!-- Active 30-Min Callback Alarms Panel -->
+<div id="ccPendingAlarmsPanel" class="cc-panel" style="display: none; border-color: #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.03)), var(--surface);">
+    <div class="cc-header" style="color: #b45309; margin-bottom: 12px;">
+        <span>⏰ منبهات إعادة الاتصال المجدولة (كل نصف ساعة عند عدم الرد)</span>
+        <span class="badge" id="ccPendingAlarmsCount" style="background: rgba(245,158,11,0.2); color: #92400e;">0</span>
+    </div>
+    <div id="ccPendingAlarmsList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px;"></div>
 </div>
 
 <!-- Virtual Softphone Dialpad Drawer / Panel -->
@@ -489,6 +501,27 @@ if ($search !== '') {
             </div>
         </div>
 
+        <!-- Quick Call Outcome Strip (Schedules 30-min Browser Alarm on No Answer) -->
+        <div style="background: rgba(245,158,11,0.08); border: 1.5px solid rgba(245,158,11,0.35); border-radius: 14px; padding: 14px; margin-bottom: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                <span style="font-weight: 800; font-size: 13px; color: #b45309;">⏰ نتيجة المكالمة (منبه تلقائي بعد 30 دقيقة عند عدم الرد):</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <button type="button" class="cc-btn" onclick="saveQuickCallOutcome('answered_agreed')" style="background: #059669; color: #fff; font-size: 12px; padding: 7px 6px; border-radius: 8px;">
+                    ✅ تم الرد والاتفاق
+                </button>
+                <button type="button" class="cc-btn" onclick="saveQuickCallOutcome('no_answer')" style="background: #d97706; color: #fff; font-size: 12px; padding: 7px 6px; border-radius: 8px;">
+                    ⏳ لم يرد (منبه 30 د)
+                </button>
+                <button type="button" class="cc-btn" onclick="saveQuickCallOutcome('busy')" style="background: #64748b; color: #fff; font-size: 12px; padding: 7px 6px; border-radius: 8px;">
+                    📴 مشغول أو مغلق (30 د)
+                </button>
+                <button type="button" class="cc-btn" onclick="saveQuickCallOutcome('wrong_number')" style="background: #dc2626; color: #fff; font-size: 12px; padding: 7px 6px; border-radius: 8px;">
+                    ❌ غير متاح (30 د)
+                </button>
+            </div>
+        </div>
+
         <!-- Active Call Control Widget (In-Page) -->
         <div id="inPageCallWidget" style="display: none; background: #fff; border: 2px solid #2563eb; border-radius: 14px; padding: 16px; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(37,99,235,0.18);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px;">
@@ -590,6 +623,7 @@ if ($search !== '') {
 <script>
 const customerName = "<?= addslashes($customer['name']) ?>";
 const customerIdGlobal = <?= (int)$customer['id'] ?>;
+const customerPhoneGlobal = "<?= addslashes($cleanPhone ?: $customer['phone']) ?>";
 
 function setTemplate(type) {
     const msgBox = document.getElementById('cc-message');
@@ -703,6 +737,8 @@ function sendPromoMessage() {
 let inPageCallTimerInterval = null;
 let inPageCallDuration = 0;
 let inPageCallCustomerId = null;
+let inPageCallCustomerName = '';
+let inPageCallCustomerPhone = '';
 
 function startCallCenterCall(phone, name, customerId) {
     if (!phone) {
@@ -711,6 +747,8 @@ function startCallCenterCall(phone, name, customerId) {
     }
 
     inPageCallCustomerId = customerId || (typeof customerIdGlobal !== 'undefined' ? customerIdGlobal : null);
+    inPageCallCustomerName = name || (typeof customerName !== 'undefined' ? customerName : 'عميل');
+    inPageCallCustomerPhone = phone || (typeof customerPhoneGlobal !== 'undefined' ? customerPhoneGlobal : '');
     inPageCallDuration = 0;
 
     // Trigger Phone Link / Windows dialer
@@ -742,21 +780,30 @@ function closeInPageCallWidget() {
     if (widget) widget.style.display = 'none';
 }
 
-async function saveInPageCallOutcome(outcome) {
-    if (!inPageCallCustomerId) {
+async function submitCallCenterOutcome(targetCustomerId, targetName, targetPhone, outcome, notes, duration) {
+    if (!targetCustomerId) {
+        if (window.ERPCallAlarms && window.ERPCallAlarms.isNoAnswerOutcome(outcome) && targetPhone) {
+            window.ERPCallAlarms.schedule({
+                customerId: null,
+                customerName: targetName || 'رقم مباشر',
+                phone: targetPhone,
+                reasonCode: outcome,
+                delayMinutes: 30
+            });
+            alert('⏰ تم ضبط منبه إعادة الاتصال بهذا الرقم بعد 30 دقيقة بنجاح!');
+            closeInPageCallWidget();
+            return;
+        }
         alert('لم يتم تحديد العميل.');
         return;
     }
 
-    const notes = document.getElementById('inPageCallNotes').value.trim();
-    const duration = inPageCallDuration;
-
     try {
         const formData = new FormData();
-        formData.append('customer_id', inPageCallCustomerId);
+        formData.append('customer_id', targetCustomerId);
         formData.append('outcome', outcome);
-        formData.append('notes', notes);
-        formData.append('duration', duration);
+        formData.append('notes', notes || '');
+        formData.append('duration', duration || 0);
 
         const res = await fetch('index.php?r=api_log_customer_call', {
             method: 'POST',
@@ -764,7 +811,25 @@ async function saveInPageCallOutcome(outcome) {
         });
         const data = await res.json();
         if (data.success) {
-            alert('✅ تم حفظ نتيجة المكالمة وتحديث سجل العميل بنجاح!');
+            if (window.ERPCallAlarms) {
+                if (window.ERPCallAlarms.isNoAnswerOutcome(outcome)) {
+                    window.ERPCallAlarms.schedule({
+                        customerId: Number(targetCustomerId),
+                        customerName: targetName || 'عميل',
+                        phone: targetPhone || '',
+                        reasonCode: outcome,
+                        delayMinutes: 30
+                    });
+                    alert('⏰ تم تسجيل عدم الرد وضبط منبه في المتصفح ليذكرك بالاتصال بـ "' + (targetName || 'العميل') + '" بعد نصف ساعة!');
+                } else {
+                    if (outcome === 'answered_agreed') {
+                        window.ERPCallAlarms.cancelByCustomer(targetCustomerId);
+                    }
+                    alert('✅ تم حفظ نتيجة المكالمة وتحديث سجل العميل بنجاح!');
+                }
+            } else {
+                alert('✅ تم حفظ نتيجة المكالمة وتحديث سجل العميل بنجاح!');
+            }
             closeInPageCallWidget();
         } else {
             alert('❌ فشل الحفظ: ' + (data.message || 'خطأ غير معروف'));
@@ -773,6 +838,100 @@ async function saveInPageCallOutcome(outcome) {
         alert('❌ خطأ في الاتصال بالسيرفر.');
     }
 }
+
+async function saveInPageCallOutcome(outcome) {
+    const notes = document.getElementById('inPageCallNotes')?.value.trim() || '';
+    const fallbackName = typeof customerName !== 'undefined' ? customerName : '';
+    const fallbackPhone = typeof customerPhoneGlobal !== 'undefined' ? customerPhoneGlobal : '';
+    await submitCallCenterOutcome(
+        inPageCallCustomerId,
+        inPageCallCustomerName || fallbackName,
+        inPageCallCustomerPhone || fallbackPhone,
+        outcome,
+        notes,
+        inPageCallDuration
+    );
+}
+
+async function saveQuickCallOutcome(outcome) {
+    if (typeof customerIdGlobal === 'undefined' || !customerIdGlobal) {
+        alert('لم يتم تحديد العميل.');
+        return;
+    }
+    await submitCallCenterOutcome(
+        customerIdGlobal,
+        typeof customerName !== 'undefined' ? customerName : 'عميل',
+        typeof customerPhoneGlobal !== 'undefined' ? customerPhoneGlobal : '',
+        outcome,
+        '',
+        0
+    );
+}
+
+function escapeCallCenterHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = String(text || '');
+    return div.innerHTML;
+}
+
+function callAlarmById(alarmId) {
+    if (!window.ERPCallAlarms) return;
+    const alarm = window.ERPCallAlarms.getAll().find(x => x.id === alarmId);
+    if (!alarm) return;
+    window.ERPCallAlarms.dismiss(alarmId);
+    const dialPhone = String(alarm.phone || '').replace(/[^\d+]/g, '');
+    if (dialPhone) {
+        startCallCenterCall(dialPhone, alarm.customerName || 'عميل', alarm.customerId || null);
+    }
+}
+
+function renderCallCenterAlarmsPanel() {
+    const panel = document.getElementById('ccPendingAlarmsPanel');
+    const listEl = document.getElementById('ccPendingAlarmsList');
+    const countEl = document.getElementById('ccPendingAlarmsCount');
+    if (!panel || !listEl || !countEl || !window.ERPCallAlarms) return;
+
+    const alarms = window.ERPCallAlarms.getAll();
+    countEl.textContent = String(alarms.length);
+    if (alarms.length === 0) {
+        panel.style.display = 'none';
+        listEl.innerHTML = '';
+        return;
+    }
+
+    panel.style.display = 'block';
+    let html = '';
+    const now = Date.now();
+    alarms.forEach(a => {
+        const rem = a.dueAt - now;
+        const isDue = rem <= 0;
+        const qParam = encodeURIComponent(a.phone || a.customerName || '');
+        const cleanDialPhone = String(a.phone || '').replace(/[^\d+]/g, '');
+        const safeId = String(a.id || '').replace(/[^a-zA-Z0-9_\-]/g, '');
+        html += `<div style="background:var(--surface);border:1.5px solid ${isDue ? '#ef4444' : 'rgba(245,158,11,0.45)'};border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <strong style="font-size:14px;color:var(--ink);">${escapeCallCenterHtml(a.customerName)}</strong>
+                <span style="font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:${isDue ? 'rgba(239,68,68,0.16)' : 'rgba(245,158,11,0.16)'};color:${isDue ? '#dc2626' : '#b45309'};">
+                    ${isDue ? '🔔 حان الموعد الآن!' : 'متبقي ' + escapeCallCenterHtml(window.ERPCallAlarms.formatCountdown(rem))}
+                </span>
+            </div>
+            <div dir="ltr" style="font-size:13px;font-weight:700;color:#2563eb;text-align:right;">${escapeCallCenterHtml(a.phone || '-')}</div>
+            <div style="font-size:12px;color:var(--muted);">السبب: ${escapeCallCenterHtml(a.reasonLabel)} • محاولة ${escapeCallCenterHtml(window.ERPCallAlarms.formatClockTime(a.createdAt))}</div>
+            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+                ${cleanDialPhone ? `<button type="button" class="cc-btn" onclick="callAlarmById('${safeId}')" style="flex:1;background:#2563eb;color:#fff;font-size:11.5px;padding:6px 8px;border-radius:8px;">📞 اتصال</button>` : ''}
+                <a href="index.php?r=call_center&q=${qParam}" class="cc-btn cc-btn-primary" style="font-size:11.5px;padding:6px 10px;border-radius:8px;">🔍 ملف</a>
+                <button type="button" class="cc-btn" onclick="ERPCallAlarms.dismiss('${safeId}')" style="background:rgba(239,68,68,0.12);color:#dc2626;border:1px solid rgba(239,68,68,0.3);font-size:11.5px;padding:6px 10px;border-radius:8px;">إلغاء</button>
+            </div>
+        </div>`;
+    });
+    listEl.innerHTML = html;
+}
+
+window.addEventListener('erp-call-alarms-updated', renderCallCenterAlarmsPanel);
+document.addEventListener('DOMContentLoaded', function () {
+    renderCallCenterAlarmsPanel();
+    setInterval(renderCallCenterAlarmsPanel, 1000);
+});
 
 // Dialpad Operations
 function toggleDialpad() {

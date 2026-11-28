@@ -423,6 +423,547 @@ function render_layout(string $route, array $user): void
             </div>
         </div>
     </div>
+    <!-- Global 30-Minute Call Center Callback Alarm System -->
+    <style>
+        @keyframes ccAlarmPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55), 0 24px 60px rgba(0, 0, 0, 0.85); }
+            50% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0), 0 24px 60px rgba(0, 0, 0, 0.85); }
+        }
+        #cc-alarms-floating-wrap {
+            position: fixed;
+            left: 18px;
+            bottom: 18px;
+            z-index: 999990;
+            display: none;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            font-family: 'Cairo', sans-serif;
+            direction: rtl;
+        }
+        #cc-alarms-floating-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #b45309, #92400e);
+            color: #fff;
+            border: 1.5px solid #fbbf24;
+            border-radius: 999px;
+            padding: 9px 15px;
+            font-size: 12.5px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            font-family: inherit;
+        }
+        #cc-alarms-floating-drawer {
+            display: none;
+            width: 330px;
+            max-width: calc(100vw - 32px);
+            max-height: 360px;
+            overflow-y: auto;
+            background: #0f172a;
+            color: #f8fafc;
+            border: 1.5px solid #c5a059;
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+        }
+        #cc-alarm-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999999;
+            display: none;
+            background: #0f172a;
+            color: #fef3c7;
+            border: 1.5px solid #f59e0b;
+            border-radius: 12px;
+            padding: 11px 18px;
+            font-size: 13.5px;
+            font-weight: 700;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            direction: rtl;
+            max-width: 92vw;
+            text-align: center;
+        }
+    </style>
+
+    <div id="cc-alarms-floating-wrap">
+        <div id="cc-alarms-floating-drawer"></div>
+        <button type="button" id="cc-alarms-floating-pill" onclick="ERPCallAlarms.toggleDrawer()">
+            <span>⏰</span>
+            <span id="cc-alarms-pill-text">منبهات إعادة الاتصال</span>
+        </button>
+    </div>
+
+    <div id="cc-alarm-toast"></div>
+
+    <div id="cc-callback-alarm-modal" style="display:none; position:fixed; inset:0; z-index:9999998; background:rgba(0,0,0,0.82); backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); align-items:center; justify-content:center; padding:16px;">
+        <div style="background:#0f172a; border:2px solid #ef4444; border-radius:20px; max-width:500px; width:100%; overflow:hidden; text-align:right; color:#f8fafc; font-family:'Cairo', sans-serif; animation: ccAlarmPulse 1.5s infinite;">
+            <div style="padding:16px 20px; background:linear-gradient(135deg, rgba(239,68,68,0.28), rgba(15,23,42,0.98)); border-bottom:1.5px solid rgba(239,68,68,0.45); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:28px;">🔔</span>
+                    <div>
+                        <h3 style="margin:0; font-size:17px; font-weight:800; color:#fecaca;">منبه الكول سنتر — حان موعد إعادة الاتصال!</h3>
+                        <p style="margin:2px 0 0; font-size:12px; color:#cbd5e1;">مر نصف ساعة على محاولة الاتصال السابقة دون رد</p>
+                    </div>
+                </div>
+            </div>
+            <div style="padding:20px;">
+                <div style="background:rgba(245,158,11,0.12); border:1.5px solid rgba(245,158,11,0.45); border-radius:14px; padding:16px; margin-bottom:16px; text-align:center;">
+                    <div style="font-size:12.5px; color:#fcd34d; font-weight:700; margin-bottom:4px;">اتصل الآن على العميل:</div>
+                    <div id="cc-alarm-cust-name" style="font-size:22px; font-weight:900; color:#ffffff; margin-bottom:6px;">-</div>
+                    <div id="cc-alarm-cust-phone" dir="ltr" style="font-size:18px; font-weight:800; color:#60a5fa; letter-spacing:1px; margin-bottom:8px;">-</div>
+                    <div id="cc-alarm-reason" style="font-size:13px; color:#fde68a; background:rgba(0,0,0,0.28); display:inline-block; padding:4px 12px; border-radius:999px;"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                    <button type="button" id="cc-alarm-call-btn" style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; border-radius:10px; padding:11px 14px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit;">
+                        📞 اتصال الآن
+                    </button>
+                    <a id="cc-alarm-wa-btn" href="#" target="_blank" rel="noopener" style="background:#25D366; color:#fff; border:none; border-radius:10px; padding:11px 14px; font-size:14px; font-weight:800; text-decoration:none; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                        💬 شات واتساب
+                    </a>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; margin-top:8px;">
+                    <button type="button" id="cc-alarm-snooze15-btn" style="flex:1; background:rgba(245,158,11,0.18); color:#fcd34d; border:1px solid rgba(245,158,11,0.5); border-radius:10px; padding:9px 10px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;">
+                        ⏰ تأجيل 15 د
+                    </button>
+                    <button type="button" id="cc-alarm-snooze30-btn" style="flex:1; background:rgba(245,158,11,0.18); color:#fcd34d; border:1px solid rgba(245,158,11,0.5); border-radius:10px; padding:9px 10px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit;">
+                        🔁 تأجيل 30 د
+                    </button>
+                    <button type="button" id="cc-alarm-dismiss-btn" style="flex:1; background:rgba(16,185,129,0.2); color:#6ee7b7; border:1px solid rgba(16,185,129,0.55); border-radius:10px; padding:9px 10px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit;">
+                        ✅ تم / إغلاق
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const STORAGE_KEY = 'erp_call_callback_alarms_v1';
+            const REASON_LABELS = {
+                no_answer: 'لم يرد / لا إجابة',
+                busy: 'الخط مشغول أو مغلق',
+                wrong_number: 'رقم غير متاح / خارج الخدمة'
+            };
+
+            let sharedAudioCtx = null;
+            let ringtoneInterval = null;
+            let ringtoneTimeout = null;
+            let titleBlinkInterval = null;
+            let baseDocumentTitle = document.title;
+            let activeAlarmId = null;
+            let notifiedIds = {};
+            let drawerOpen = false;
+            let toastTimer = null;
+
+            function cleanDial(phone) {
+                return String(phone || '').replace(/[^\d+]/g, '');
+            }
+
+            function cleanWhatsApp(phone) {
+                let digits = String(phone || '').replace(/\D/g, '');
+                if (digits.startsWith('0') && digits.length >= 10) {
+                    digits = '2' + digits;
+                }
+                return digits;
+            }
+
+            function unlockAudio() {
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) return null;
+                    if (!sharedAudioCtx) {
+                        sharedAudioCtx = new AudioCtx();
+                    }
+                    if (sharedAudioCtx.state === 'suspended') {
+                        sharedAudioCtx.resume().catch(() => {});
+                    }
+                    return sharedAudioCtx;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function playAlarmPattern() {
+                try {
+                    const ctx = unlockAudio();
+                    if (!ctx) return;
+                    const now = ctx.currentTime;
+                    const notes = [
+                        { freq: 880, start: 0.0, dur: 0.16 },
+                        { freq: 1174.66, start: 0.19, dur: 0.16 },
+                        { freq: 880, start: 0.42, dur: 0.16 },
+                        { freq: 1174.66, start: 0.61, dur: 0.24 }
+                    ];
+                    notes.forEach(n => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(n.freq, now + n.start);
+                        gain.gain.setValueAtTime(0.001, now + n.start);
+                        gain.gain.exponentialRampToValueAtTime(0.32, now + n.start + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + n.start);
+                        osc.stop(now + n.start + n.dur + 0.02);
+                    });
+                } catch (e) {}
+            }
+
+            function stopAlarmRingtone() {
+                if (ringtoneInterval) {
+                    clearInterval(ringtoneInterval);
+                    ringtoneInterval = null;
+                }
+                if (ringtoneTimeout) {
+                    clearTimeout(ringtoneTimeout);
+                    ringtoneTimeout = null;
+                }
+                if (titleBlinkInterval) {
+                    clearInterval(titleBlinkInterval);
+                    titleBlinkInterval = null;
+                    document.title = baseDocumentTitle;
+                }
+            }
+
+            function startAlarmRingtone(customerName) {
+                stopAlarmRingtone();
+                baseDocumentTitle = document.title.replace(/^🔔\s.*?\|\s/, '');
+                playAlarmPattern();
+                ringtoneInterval = setInterval(playAlarmPattern, 3500);
+                ringtoneTimeout = setTimeout(() => {
+                    if (ringtoneInterval) {
+                        clearInterval(ringtoneInterval);
+                        ringtoneInterval = null;
+                    }
+                }, 60000);
+
+                let flag = false;
+                titleBlinkInterval = setInterval(() => {
+                    flag = !flag;
+                    document.title = flag ? ('🔔 اتصل على ' + customerName + '!') : baseDocumentTitle;
+                }, 900);
+            }
+
+            function loadAlarms() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return [];
+                    const list = JSON.parse(raw);
+                    return Array.isArray(list) ? list : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function saveAlarms(list) {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+                } catch (e) {}
+                renderFloatingWidget();
+                window.dispatchEvent(new CustomEvent('erp-call-alarms-updated'));
+            }
+
+            function formatCountdown(ms) {
+                if (ms <= 0) return 'الآن 🔔';
+                const totalSec = Math.ceil(ms / 1000);
+                const mins = Math.floor(totalSec / 60);
+                const secs = totalSec % 60;
+                return String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            }
+
+            function formatClockTime(ts) {
+                try {
+                    return new Date(ts).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function showToast(msg) {
+                const toast = document.getElementById('cc-alarm-toast');
+                if (!toast) return;
+                toast.textContent = msg;
+                toast.style.display = 'block';
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 4800);
+            }
+
+            function requestBrowserPermission() {
+                if ('Notification' in window && Notification.permission === 'default') {
+                    Notification.requestPermission().catch(() => {});
+                }
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = String(text || '');
+                return div.innerHTML;
+            }
+
+            function renderFloatingWidget() {
+                const wrap = document.getElementById('cc-alarms-floating-wrap');
+                const pillText = document.getElementById('cc-alarms-pill-text');
+                const drawer = document.getElementById('cc-alarms-floating-drawer');
+                if (!wrap || !pillText || !drawer) return;
+
+                const alarms = getAll();
+                if (alarms.length === 0) {
+                    wrap.style.display = 'none';
+                    drawer.style.display = 'none';
+                    drawerOpen = false;
+                    return;
+                }
+
+                wrap.style.display = 'flex';
+                const nextAlarm = alarms[0];
+                const remainingMs = nextAlarm.dueAt - Date.now();
+                pillText.textContent = 'منبهات الكول سنتر (' + alarms.length + ') • ' + (remainingMs <= 0 ? 'حان الموعد!' : 'بعد ' + formatCountdown(remainingMs));
+
+                drawer.style.display = drawerOpen ? 'block' : 'none';
+                if (!drawerOpen) return;
+
+                let html = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(255,255,255,0.12);padding-bottom:8px;margin-bottom:8px;">'
+                    + '<strong style="color:#fbbf24;font-size:13px;">⏰ مكالمات مجدولة للإعادة</strong>'
+                    + '<button type="button" onclick="ERPCallAlarms.toggleDrawer()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">&times;</button>'
+                    + '</div>';
+
+                alarms.forEach(a => {
+                    const rem = a.dueAt - Date.now();
+                    const qParam = encodeURIComponent(a.phone || a.customerName || '');
+                    html += '<div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px;margin-bottom:8px;">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">'
+                        + '<strong style="font-size:13px;color:#fff;">' + escapeHtml(a.customerName) + '</strong>'
+                        + '<span style="font-size:11.5px;font-weight:800;color:' + (rem <= 0 ? '#f87171' : '#fcd34d') + ';">' + escapeHtml(formatCountdown(rem)) + '</span>'
+                        + '</div>'
+                        + '<div style="font-size:11.5px;color:#93c5fd;margin:3px 0;" dir="ltr">' + escapeHtml(a.phone || '-') + '</div>'
+                        + '<div style="font-size:11px;color:#cbd5e1;margin-bottom:7px;">السبب: ' + escapeHtml(a.reasonLabel) + '</div>'
+                        + '<div style="display:flex;gap:6px;">'
+                        + '<a href="index.php?r=call_center&q=' + qParam + '" style="flex:1;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;text-align:center;">🔍 فتح</a>'
+                        + '<button type="button" onclick="ERPCallAlarms.dismiss(\'' + escapeHtml(a.id) + '\')" style="background:rgba(239,68,68,0.22);color:#fca5a5;border:1px solid rgba(239,68,68,0.45);border-radius:6px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;">إلغاء</button>'
+                        + '</div></div>';
+                });
+                drawer.innerHTML = html;
+            }
+
+            function showDueModal(alarm) {
+                const modal = document.getElementById('cc-callback-alarm-modal');
+                if (!modal) return;
+
+                activeAlarmId = alarm.id;
+                const elapsedMin = Math.max(1, Math.round((Date.now() - alarm.createdAt) / 60000));
+                document.getElementById('cc-alarm-cust-name').textContent = alarm.customerName || 'عميل';
+                document.getElementById('cc-alarm-cust-phone').textContent = alarm.phone || '-';
+                document.getElementById('cc-alarm-reason').textContent =
+                    'السبب: ' + (alarm.reasonLabel || 'لم يرد') + ' • منذ ' + elapsedMin + ' دقيقة (الساعة ' + formatClockTime(alarm.createdAt) + ')';
+
+                const callBtn = document.getElementById('cc-alarm-call-btn');
+                const waBtn = document.getElementById('cc-alarm-wa-btn');
+                const snooze15Btn = document.getElementById('cc-alarm-snooze15-btn');
+                const snooze30Btn = document.getElementById('cc-alarm-snooze30-btn');
+                const dismissBtn = document.getElementById('cc-alarm-dismiss-btn');
+
+                const dialPhone = cleanDial(alarm.phone);
+                const waPhone = cleanWhatsApp(alarm.phone);
+
+                callBtn.onclick = function () {
+                    dismiss(alarm.id);
+                    if (dialPhone) {
+                        try { window.location.href = 'tel:' + dialPhone; } catch (e) {}
+                    }
+                    const qTarget = encodeURIComponent(alarm.phone || alarm.customerName || '');
+                    setTimeout(() => {
+                        window.location.href = 'index.php?r=call_center&q=' + qTarget;
+                    }, 350);
+                };
+
+                if (waPhone) {
+                    waBtn.style.display = 'inline-flex';
+                    waBtn.href = 'https://wa.me/' + waPhone;
+                } else {
+                    waBtn.style.display = 'none';
+                }
+
+                snooze15Btn.onclick = function () { snooze(alarm.id, 15); };
+                snooze30Btn.onclick = function () { snooze(alarm.id, 30); };
+                dismissBtn.onclick = function () { dismiss(alarm.id); };
+
+                modal.style.display = 'flex';
+                startAlarmRingtone(alarm.customerName || 'العميل');
+
+                if ('Notification' in window && Notification.permission === 'granted' && !notifiedIds[alarm.id]) {
+                    notifiedIds[alarm.id] = true;
+                    try {
+                        const n = new Notification('🔔 اتصل على العميل: ' + (alarm.customerName || 'عميل'), {
+                            body: 'اتصل على ' + (alarm.customerName || 'العميل') + (alarm.phone ? ' (' + alarm.phone + ')' : '') + ' — ' + (alarm.reasonLabel || 'لم يرد') + ' منذ نصف ساعة',
+                            icon: 'assets/whatsapp_logo.png',
+                            tag: alarm.id,
+                            requireInteraction: true
+                        });
+                        n.onclick = function () {
+                            window.focus();
+                            const qTarget = encodeURIComponent(alarm.phone || alarm.customerName || '');
+                            window.location.href = 'index.php?r=call_center&q=' + qTarget;
+                            n.close();
+                        };
+                    } catch (e) {}
+                }
+            }
+
+            function hideDueModal() {
+                const modal = document.getElementById('cc-callback-alarm-modal');
+                if (modal) modal.style.display = 'none';
+                activeAlarmId = null;
+                stopAlarmRingtone();
+            }
+
+            function checkDueAlarms() {
+                const alarms = getAll();
+                const now = Date.now();
+                const due = alarms.find(a => a.dueAt <= now);
+                if (due) {
+                    if (activeAlarmId !== due.id) {
+                        showDueModal(due);
+                    }
+                } else if (activeAlarmId) {
+                    hideDueModal();
+                }
+                renderFloatingWidget();
+            }
+
+            function getAll() {
+                return loadAlarms()
+                    .filter(a => a && a.dueAt)
+                    .sort((a, b) => a.dueAt - b.dueAt);
+            }
+
+            function schedule(opts) {
+                const customerId = opts && opts.customerId ? Number(opts.customerId) : null;
+                const customerName = (opts && opts.customerName ? String(opts.customerName) : '').trim() || 'عميل';
+                const phone = (opts && opts.phone ? String(opts.phone) : '').trim();
+                const reasonCode = (opts && opts.reasonCode) || 'no_answer';
+                const reasonLabel = (opts && opts.reasonLabel) || REASON_LABELS[reasonCode] || 'لم يرد';
+                const delayMinutes = Number(opts && opts.delayMinutes) > 0 ? Number(opts.delayMinutes) : 30;
+
+                unlockAudio();
+                requestBrowserPermission();
+
+                const now = Date.now();
+                const alarms = loadAlarms().filter(a => {
+                    if (customerId && Number(a.customerId) === customerId) return false;
+                    if (!customerId && phone && cleanDial(a.phone) === cleanDial(phone)) return false;
+                    return true;
+                });
+
+                alarms.push({
+                    id: 'cca_' + (customerId || 'p') + '_' + now,
+                    customerId: customerId,
+                    customerName: customerName,
+                    phone: phone,
+                    reasonCode: reasonCode,
+                    reasonLabel: reasonLabel,
+                    createdAt: now,
+                    dueAt: now + delayMinutes * 60 * 1000
+                });
+
+                saveAlarms(alarms);
+                showToast('⏰ تم ضبط منبه للاتصال بـ "' + customerName + '" بعد ' + delayMinutes + ' دقيقة (' + reasonLabel + ')');
+            }
+
+            function dismiss(alarmId) {
+                const alarms = loadAlarms().filter(a => a.id !== alarmId);
+                if (activeAlarmId === alarmId) {
+                    hideDueModal();
+                }
+                saveAlarms(alarms);
+                checkDueAlarms();
+            }
+
+            function cancelByCustomer(customerId) {
+                if (!customerId) return;
+                const cid = Number(customerId);
+                const before = loadAlarms();
+                const after = before.filter(a => Number(a.customerId) !== cid);
+                if (after.length !== before.length) {
+                    if (activeAlarmId && !after.some(a => a.id === activeAlarmId)) {
+                        hideDueModal();
+                    }
+                    saveAlarms(after);
+                }
+            }
+
+            function snooze(alarmId, minutes) {
+                const mins = Number(minutes) > 0 ? Number(minutes) : 15;
+                const alarms = loadAlarms();
+                const target = alarms.find(a => a.id === alarmId);
+                if (!target) {
+                    hideDueModal();
+                    return;
+                }
+                target.dueAt = Date.now() + mins * 60 * 1000;
+                delete notifiedIds[alarmId];
+                hideDueModal();
+                saveAlarms(alarms);
+                showToast('⏰ تم تأجيل منبه "' + target.customerName + '" لمدة ' + mins + ' دقيقة');
+            }
+
+            function testSound() {
+                unlockAudio();
+                requestBrowserPermission();
+                playAlarmPattern();
+                const permText = ('Notification' in window)
+                    ? (Notification.permission === 'granted' ? 'وإشعارات المتصفح مفعّلة ✅' : 'يُرجى السماح بإشعارات المتصفح من النافذة')
+                    : '';
+                showToast('🔔 تم تشغيل صوت المنبه التجريبي ' + permText);
+            }
+
+            function isNoAnswerOutcome(outcome) {
+                return outcome === 'no_answer' || outcome === 'busy' || outcome === 'wrong_number';
+            }
+
+            function toggleDrawer() {
+                drawerOpen = !drawerOpen;
+                renderFloatingWidget();
+            }
+
+            window.ERPCallAlarms = {
+                schedule: schedule,
+                dismiss: dismiss,
+                cancelByCustomer: cancelByCustomer,
+                snooze: snooze,
+                getAll: getAll,
+                testSound: testSound,
+                isNoAnswerOutcome: isNoAnswerOutcome,
+                toggleDrawer: toggleDrawer,
+                formatCountdown: formatCountdown,
+                formatClockTime: formatClockTime
+            };
+
+            document.addEventListener('pointerdown', unlockAudio, { once: true });
+            window.addEventListener('storage', function (e) {
+                if (e.key === STORAGE_KEY) {
+                    checkDueAlarms();
+                    window.dispatchEvent(new CustomEvent('erp-call-alarms-updated'));
+                }
+            });
+            window.addEventListener('focus', checkDueAlarms);
+            document.addEventListener('visibilitychange', function () {
+                if (!document.hidden) checkDueAlarms();
+            });
+            document.addEventListener('DOMContentLoaded', function () {
+                checkDueAlarms();
+                setInterval(checkDueAlarms, 5000);
+                setInterval(renderFloatingWidget, 1000);
+            });
+        })();
+    </script>
     </body>
     </html>
     <?php

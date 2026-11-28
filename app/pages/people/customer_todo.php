@@ -533,10 +533,10 @@ $buildPaginationUrl = function (int $targetPage) use ($tab, $search, $locationFi
                         </td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <div id="notes-text-<?= (int)$row['id'] ?>" class="note-preview" onclick="openNoteModal(<?= (int)$row['id'] ?>, '<?= e(addslashes($row['name'])) ?>')" title="انقر لتعديل الملاحظة">
+                                <div id="notes-text-<?= (int)$row['id'] ?>" class="note-preview" onclick="openNoteModal(<?= (int)$row['id'] ?>, '<?= e(addslashes($row['name'])) ?>', '<?= e(addslashes(clean_dial_phone($row['phone']))) ?>')" title="انقر لتعديل الملاحظة">
                                     <?= e($row['followup_notes'] ?: '➕ إضافة ملاحظة...') ?>
                                 </div>
-                                <button type="button" class="btn small" onclick="openNoteModal(<?= (int)$row['id'] ?>, '<?= e(addslashes($row['name'])) ?>')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px;" title="كتابة ملاحظة المكالمة">
+                                <button type="button" class="btn small" onclick="openNoteModal(<?= (int)$row['id'] ?>, '<?= e(addslashes($row['name'])) ?>', '<?= e(addslashes(clean_dial_phone($row['phone']))) ?>')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px;" title="كتابة ملاحظة المكالمة">
                                     ✏️
                                 </button>
                             </div>
@@ -623,6 +623,9 @@ async function toggleTodoStatus(customerId) {
 
         const data = res.data;
         const isContacted = (data.status === 'contacted');
+        if (isContacted && window.ERPCallAlarms) {
+            window.ERPCallAlarms.cancelByCustomer(customerId);
+        }
 
         // Update button
         btn.className = `btn-toggle-todo ${isContacted ? 'is-contacted' : 'is-pending'}`;
@@ -693,8 +696,13 @@ function onWhatsAppClick(customerId) {
 }
 
 // Notes Modal Logic
-function openNoteModal(customerId, customerName) {
+let noteModalCustomerName = '';
+let noteModalCustomerPhone = '';
+
+function openNoteModal(customerId, customerName, customerPhone) {
     document.getElementById('modalCustomerId').value = customerId;
+    noteModalCustomerName = customerName || '';
+    noteModalCustomerPhone = customerPhone || '';
     document.getElementById('noteModalTitle').textContent = `ملاحظة مكالمة: ${customerName}`;
     const curText = document.getElementById(`notes-text-${customerId}`)?.textContent?.trim() || '';
     document.getElementById('modalNoteText').value = (curText === '➕ إضافة ملاحظة...') ? '' : curText;
@@ -738,6 +746,19 @@ async function saveNoteModal() {
                 preview.textContent = notes || '➕ إضافة ملاحظة...';
             }
             closeNoteModal();
+
+            if (window.ERPCallAlarms && /لم يرد|لم يقم بالرد|مغلق|مشغول|غير متاح/.test(notes)) {
+                let reasonCode = 'no_answer';
+                if (/مغلق|مشغول/.test(notes)) reasonCode = 'busy';
+                else if (/غير متاح/.test(notes)) reasonCode = 'wrong_number';
+                window.ERPCallAlarms.schedule({
+                    customerId: Number(customerId),
+                    customerName: noteModalCustomerName,
+                    phone: noteModalCustomerPhone,
+                    reasonCode: reasonCode,
+                    delayMinutes: 30
+                });
+            }
         } else {
             alert(res.message || 'حدث خطأ أثناء حفظ الملاحظة.');
         }
@@ -837,6 +858,9 @@ async function submitCallOutcome(outcome) {
 
         const data = res.data;
         const isContacted = (data.status === 'contacted');
+        if (isContacted && window.ERPCallAlarms) {
+            window.ERPCallAlarms.cancelByCustomer(customerId);
+        }
 
         // Update button
         const btn = document.getElementById(`btn-status-${customerId}`);
@@ -892,6 +916,20 @@ async function submitCallOutcome(outcome) {
         }
 
         closeCallAssistant();
+
+        if (window.ERPCallAlarms) {
+            if (window.ERPCallAlarms.isNoAnswerOutcome(outcome)) {
+                window.ERPCallAlarms.schedule({
+                    customerId: Number(customerId),
+                    customerName: activeCallCustomerName,
+                    phone: activeCallPhone,
+                    reasonCode: outcome,
+                    delayMinutes: 30
+                });
+            } else if (outcome === 'answered_agreed') {
+                window.ERPCallAlarms.cancelByCustomer(customerId);
+            }
+        }
 
     } catch (e) {
         console.error(e);
