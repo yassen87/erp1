@@ -6,6 +6,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/services.php';
 require_once __DIR__ . '/sync.php';
+require_once __DIR__ . '/monthly_report_export.php';
 require_once __DIR__ . '/navigation.php';
 
 function handle_ajax_requests(string $route): void
@@ -836,7 +837,29 @@ function handle_download(string $route): void
 {
     if ($route === 'reports' && !empty($_GET['export'])) {
         require_login();
-        $key = preg_replace('/[^a-z_]/', '', (string) $_GET['export']);
+        $exportType = (string) $_GET['export'];
+        if (in_array($exportType, ['monthly_excel', 'monthly_pdf'], true)) {
+            $canAnyReport = has_permission('reports_sales_by_location')
+                || has_permission('reports_sales_by_payment')
+                || has_permission('reports_sales_by_user')
+                || has_permission('reports_top_products')
+                || has_permission('reports_perfume_usage')
+                || has_permission('reports_new_customers');
+            if (!$canAnyReport) {
+                http_response_code(403);
+                exit('غير مصرح');
+            }
+            $month = preg_match('/^\d{4}-\d{2}$/', (string) ($_GET['month'] ?? '')) ? (string) $_GET['month'] : date('Y-m');
+            $locId = current_user_location_id() !== null
+                ? (int) current_user_location_id()
+                : (!empty($_GET['location_id']) ? (int) $_GET['location_id'] : null);
+            $monthlyData = collect_monthly_report_data($month, $locId);
+            if ($exportType === 'monthly_excel') {
+                output_monthly_report_xlsx($monthlyData);
+            }
+            output_monthly_report_pdf_view($monthlyData);
+        }
+        $key = preg_replace('/[^a-z_]/', '', $exportType);
         if (!has_permission('reports_' . $key)) {
             http_response_code(403);
             exit('غير مصرح');
