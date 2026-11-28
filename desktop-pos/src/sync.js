@@ -151,13 +151,17 @@ class SyncEngine {
                 this.isSyncing = false;
                 const pendingCount = (await getAllFromStore('pending_invoices')).length;
                 const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
+                const offlineMsg = `أوفلاين (${pendingCount} فواتير بانتظار المزامنة)`;
                 this.notifyStatus({
                     isOnline: false,
                     isSyncing: false,
                     pendingCount,
                     pendingCustomersCount,
-                    message: `أوفلاين (${pendingCount} فواتير بانتظار المزامنة)`
+                    message: offlineMsg
                 });
+                if (manual) {
+                    alert(`⚠️ لا يمكن الوصول للسيرفر السحابي حالياً (${this.serverUrl}).\nتأكد من اتصال الإنترنت ورابط السيرفر في الإعدادات.`);
+                }
                 return;
             }
 
@@ -173,6 +177,9 @@ class SyncEngine {
 
             const pendingCount = (await getAllFromStore('pending_invoices')).length;
             const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
+            const failedMsgs = (pushResult && Array.isArray(pushResult.failed_messages)) ? pushResult.failed_messages : [];
+            const errorSummary = failedMsgs.length > 0 ? failedMsgs.join(' | ') : null;
+
             this.isSyncing = false;
             this.notifyStatus({
                 isOnline: true,
@@ -180,11 +187,19 @@ class SyncEngine {
                 pendingCount,
                 pendingCustomersCount,
                 pushedCount: pushResult ? pushResult.synced_count : 0,
-                message: 'متصل بالسحابة — تم التحديث بنجاح'
+                errorMessage: errorSummary,
+                message: errorSummary ? `متصل — تعذر رفع ${pendingCount} فواتير` : 'متصل بالسحابة — تم التحديث بنجاح'
             });
 
-            if (manual && window.playBeep) {
-                window.playBeep('success');
+            if (manual) {
+                if (failedMsgs.length > 0) {
+                    alert('⚠️ لم يتم رفع بعض الفواتير المعلقة:\n\n' + failedMsgs.join('\n'));
+                } else if (pushResult && pushResult.synced_count > 0 && pendingCount === 0) {
+                    if (window.playBeep) window.playBeep('success');
+                    alert(`✅ تمت مزامنة ورفع ${pushResult.synced_count} فاتورة بنجاح!`);
+                } else if (window.playBeep) {
+                    window.playBeep('success');
+                }
             }
 
         } catch (err) {
@@ -192,13 +207,27 @@ class SyncEngine {
             this.isSyncing = false;
             const pendingCount = (await getAllFromStore('pending_invoices')).length;
             const pendingCustomersCount = ((await getSetting('pending_customers', [])) || []).length;
+            const authRequired = err && err.code === 'AUTH_REQUIRED';
             this.notifyStatus({
                 isOnline: this.isOnline,
                 isSyncing: false,
                 pendingCount,
                 pendingCustomersCount,
+                authRequired,
+                errorMessage: err.message,
                 message: 'حدث خطأ أثناء المزامنة: ' + err.message
             });
+
+            if (manual) {
+                if (authRequired) {
+                    alert('⚠️ ' + err.message + '\nسيتم فتح نافذة الإعدادات لتسجيل الدخول لرفع الفواتير المعلقة.');
+                    if (typeof window.openSettingsModal === 'function') {
+                        window.openSettingsModal();
+                    }
+                } else {
+                    alert('❌ تعذر إتمام المزامنة:\n' + err.message);
+                }
+            }
         }
     }
 
@@ -212,6 +241,11 @@ class SyncEngine {
         }
 
         const token = await this.getAuthToken();
+        if (!token) {
+            const authErr = new Error('يلزم تسجيل الدخول بحساب النظام من الإعدادات لإتمام المزامنة');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
         const locationId = (await getSetting('active_location_id', 3)) || 3;
 
         const payload = {
@@ -229,11 +263,16 @@ class SyncEngine {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+            const authErr = new Error((data && data.message) || 'انتهت جلسة المزامنة — يرجى تسجيل الدخول من الإعدادات');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
         if (!res.ok) {
-            throw new Error(`Customer push failed with HTTP status ${res.status}`);
+            throw new Error((data && data.message) || `Customer push failed with HTTP status ${res.status}`);
         }
 
-        const data = await res.json();
         if (data && data.success && Array.isArray(data.customer_results)) {
             const syncedKeys = new Set();
             const idMap = new Map();
@@ -282,10 +321,15 @@ class SyncEngine {
     async pushPendingInvoices() {
         const pending = await getAllFromStore('pending_invoices');
         if (!pending || pending.length === 0) {
-            return { synced_count: 0 };
+            return { synced_count: 0, errors_count: 0, failed_messages: [], results: [] };
         }
 
         const token = await this.getAuthToken();
+        if (!token) {
+            const authErr = new Error('يلزم تسجيل الدخول بحساب النظام من الإعدادات لإتمام المزامنة');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
         const locationId = (await getSetting('active_location_id', 3)) || 3;
 
         const payload = {
@@ -303,11 +347,17 @@ class SyncEngine {
             body: JSON.stringify(payload)
         });
 
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+            const authErr = new Error((data && data.message) || 'انتهت جلسة المزامنة — يرجى تسجيل الدخول من الإعدادات');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
         if (!res.ok) {
-            throw new Error(`Push failed with HTTP status ${res.status}`);
+            throw new Error((data && data.message) || `Push failed with HTTP status ${res.status}`);
         }
 
-        const data = await res.json();
+        const failedMessages = [];
         if (data && data.success && Array.isArray(data.results)) {
             for (const r of data.results) {
                 if (r.status === 'synced' || r.status === 'already_synced') {
@@ -322,10 +372,17 @@ class SyncEngine {
                         // Remove from pending
                         await deleteFromStore('pending_invoices', r.offline_uuid);
                     }
+                } else if (r.status === 'error') {
+                    const inv = await getFromStore('pending_invoices', r.offline_uuid);
+                    const invLabel = (inv && inv.offline_number) ? inv.offline_number : r.offline_uuid;
+                    failedMessages.push(`${invLabel}: ${r.message || 'خطأ في الحفظ على السيرفر'}`);
                 }
             }
+        } else if (data && data.success === false) {
+            throw new Error(data.message || 'فشل رفع الفواتير على السيرفر');
         }
 
+        data.failed_messages = failedMessages;
         return data;
     }
 
@@ -334,7 +391,12 @@ class SyncEngine {
      */
     async pullCatalog(locationId) {
         const token = await this.getAuthToken();
-        const url = `${this.serverUrl}/index.php?r=api_sync_pull&location_id=${locationId}${token ? '&token=' + encodeURIComponent(token) : ''}`;
+        if (!token) {
+            const authErr = new Error('يلزم تسجيل الدخول بحساب النظام من الإعدادات لإتمام المزامنة');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
+        const url = `${this.serverUrl}/index.php?r=api_sync_pull&location_id=${locationId}&token=${encodeURIComponent(token)}`;
 
         const res = await fetch(url, {
             method: 'GET',
@@ -343,11 +405,16 @@ class SyncEngine {
             }
         });
 
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+            const authErr = new Error((data && data.message) || 'انتهت جلسة المزامنة — يرجى تسجيل الدخول من الإعدادات');
+            authErr.code = 'AUTH_REQUIRED';
+            throw authErr;
+        }
         if (!res.ok) {
-            throw new Error(`Pull failed with HTTP status ${res.status}`);
+            throw new Error((data && data.message) || `Pull failed with HTTP status ${res.status}`);
         }
 
-        const data = await res.json();
         if (data && data.success) {
             await saveCatalogData(data);
             if (window.onCatalogRefreshed) {
@@ -355,7 +422,7 @@ class SyncEngine {
             }
             return data;
         } else {
-            throw new Error(data.message || 'Unknown pull error');
+            throw new Error((data && data.message) || 'Unknown pull error');
         }
     }
 }

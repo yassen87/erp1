@@ -248,7 +248,7 @@ function process_pushed_offline_customers(array $customers, array $user, int $de
                 }
             }
 
-            $stmtNew = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source, notes) VALUES (?, ?, ?, ?, ?, "offline_pos", ?)');
+            $stmtNew = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source, notes) VALUES (?, ?, ?, ?, ?, "offline", ?)');
             $stmtNew->execute([$name, $phone !== '' ? $phone : null, $bdate, $locationId, (int)$user['id'], $notes ?: null]);
             $serverId = (int)$db->lastInsertId();
 
@@ -352,7 +352,7 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 }
                 if (!$customerId && $custName !== '' && ($custName !== 'زبون عابر' || $custPhone !== '')) {
                     // Create new customer record (including birthdate)
-                    $stmtNewCust = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source) VALUES (?, ?, ?, ?, ?, "offline_pos")');
+                    $stmtNewCust = $db->prepare('INSERT INTO customers (name, phone, birthdate, location_id, created_by, source) VALUES (?, ?, ?, ?, ?, "offline")');
                     $stmtNewCust->execute([$custName, $custPhone ?: null, $custBirthdate, $locationId, (int)$user['id']]);
                     $customerId = (int)$db->lastInsertId();
                 }
@@ -445,7 +445,7 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                     $postData['recipe_id'][]             = (string)($rec['recipe_id'] ?? $rec['id'] ?? 0);
                     $postData['recipe_bottle_id'][]      = (string)($rec['bottle_id'] ?? 'default');
                     $postData['recipe_without_bottle'][] = !empty($rec['without_bottle']) ? '1' : '0';
-                    $postData['recipe_price'][]          = (string)($rec['price'] ?? '');
+                    $postData['recipe_price'][]          = (string)($rec['price'] ?? $rec['unit_price'] ?? '');
                     $postData['recipe_is_gift'][]        = !empty($rec['is_gift']) ? '1' : '0';
                 }
             }
@@ -455,7 +455,7 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
                 foreach ($inv['offers'] as $off) {
                     $postData['offer_id'][]          = (string)($off['offer_id'] ?? $off['id'] ?? 0);
                     $postData['offer_qty'][]         = (string)($off['qty'] ?? $off['quantity'] ?? 1);
-                    $postData['offer_price'][]       = (string)($off['price'] ?? '');
+                    $postData['offer_price'][]       = (string)($off['price'] ?? $off['unit_price'] ?? '');
                     $postData['offer_custom_data'][] = !empty($off['custom_data']) ? (is_string($off['custom_data']) ? $off['custom_data'] : json_encode($off['custom_data'])) : '';
                 }
             }
@@ -473,7 +473,11 @@ function process_pushed_offline_invoices(array $invoices, array $user, int $defa
             $stmtInv->execute([$invoiceId]);
             $createdInv = $stmtInv->fetch();
 
-            $offlineCreatedAt = !empty($inv['created_at']) ? (string)$inv['created_at'] : null;
+            $offlineCreatedAt = null;
+            if (!empty($inv['created_at'])) {
+                $ts = strtotime((string)$inv['created_at']);
+                $offlineCreatedAt = $ts !== false ? date('Y-m-d H:i:s', $ts) : null;
+            }
 
             // Record in offline_sync_invoices mapping table
             $stmtSync = $db->prepare('INSERT INTO offline_sync_invoices (offline_uuid, invoice_id, location_id, offline_created_at, raw_payload) VALUES (?, ?, ?, ?, ?)');

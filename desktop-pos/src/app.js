@@ -125,22 +125,27 @@ function updateSyncBadge(info) {
     if (!badge || !text) return;
 
     badge.className = 'sync-status-badge';
+    badge.title = info.errorMessage || info.message || 'اضغط للمزامنة الفورية مع السيرفر السحابي';
+
+    const pendingParts = [];
+    if (info.pendingCount > 0) pendingParts.push(`${info.pendingCount} فواتير`);
+    if (info.pendingCustomersCount > 0) pendingParts.push(`${info.pendingCustomersCount} عملاء`);
+    const pendingMsg = pendingParts.length > 0 ? ` (${pendingParts.join(' و ')} معلقة)` : '';
+
     if (info.isSyncing) {
         badge.classList.add('syncing');
         text.innerText = info.message || 'جاري المزامنة...';
+    } else if (info.authRequired) {
+        badge.classList.add('offline');
+        text.innerText = `يلزم تسجيل الدخول للمزامنة${pendingMsg}`;
+    } else if (info.errorMessage && (info.pendingCount > 0 || info.pendingCustomersCount > 0)) {
+        badge.classList.add('offline');
+        text.innerText = `متصل — تعذر الرفع${pendingMsg}`;
     } else if (info.isOnline) {
         badge.classList.add('online');
-        const pendingParts = [];
-        if (info.pendingCount > 0) pendingParts.push(`${info.pendingCount} فواتير`);
-        if (info.pendingCustomersCount > 0) pendingParts.push(`${info.pendingCustomersCount} عملاء`);
-        const pendingMsg = pendingParts.length > 0 ? ` (${pendingParts.join(' و ')} معلقة)` : '';
         text.innerText = `متصل بالسحابة${pendingMsg}`;
     } else {
         badge.classList.add('offline');
-        const pendingParts = [];
-        if (info.pendingCount > 0) pendingParts.push(`${info.pendingCount} فواتير`);
-        if (info.pendingCustomersCount > 0) pendingParts.push(`${info.pendingCustomersCount} عملاء`);
-        const pendingMsg = pendingParts.length > 0 ? ` (${pendingParts.join(' و ')} معلقة)` : '';
         text.innerText = `أوفلاين${pendingMsg}`;
     }
 }
@@ -1130,83 +1135,255 @@ function printThermalReceipt(invoice, items) {
     }
 }
 
-function generateReceiptHtml(inv, items) {
-    const dateFormatted = new Date(inv.created_at).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo' });
-    const itemsRows = items.map(i => `
-        <tr style="border-bottom: 1px dashed #ccc;">
-            <td style="padding: 4px 0; font-size: 11px; text-align: right;">${i.name}</td>
-            <td style="padding: 4px 0; font-size: 11px; text-align: center;">${i.quantity}</td>
-            <td style="padding: 4px 0; font-size: 11px; text-align: left;">${(i.quantity * i.unit_price).toFixed(2)}</td>
-        </tr>
-    `).join('');
+let cachedReceiptLogoDataUrl = null;
+function getReceiptLogoDataUrl() {
+    if (cachedReceiptLogoDataUrl !== null) return cachedReceiptLogoDataUrl;
+    try {
+        const imgEl = document.querySelector('.brand-logo');
+        if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = imgEl.naturalWidth;
+            canvas.height = imgEl.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(imgEl, 0, 0);
+                cachedReceiptLogoDataUrl = canvas.toDataURL('image/png');
+                return cachedReceiptLogoDataUrl;
+            }
+        }
+    } catch (e) {}
+    return 'logo.png';
+}
 
+function escapeReceiptHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatReceiptMoney(value) {
+    const num = Number(value || 0);
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+}
+
+function formatReceiptQty(value) {
+    const num = Number(value || 0);
+    if (!Number.isFinite(num)) return '0';
+    return String(parseFloat(num.toFixed(6)));
+}
+
+function formatReceiptDateTime(isoString) {
+    const d = isoString ? new Date(isoString) : new Date();
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Africa/Cairo',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    }).formatToParts(d);
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+    const period = (map.dayPeriod || '').toUpperCase().includes('PM') ? 'مساءً' : 'صباحاً';
+    return `${map.day}/${map.month}/${map.year} ${map.hour}:${map.minute} ${period}`;
+}
+
+function receiptPaymentRows(inv) {
+    const labels = {
+        cash: 'نقدي',
+        instapay: 'إنستا باي',
+        vodafone_cash: 'فودافون كاش',
+        bank_transfer: 'تحويل بنكي',
+        salary_deduction: 'خصم من راتب الموظف',
+        customer_credit: 'رصيد مستبدل'
+    };
+    const paid = Number(inv.paid_total || 0);
+    if (paid <= 0) return '';
+    const method = String(inv.payment_method || 'cash');
+    let rowsHtml = '';
+    if (method === 'mixed_cash_instapay' || method === 'mixed_cash_vodafone') {
+        const cashAmt = Number(inv.paid_cash || 0);
+        const secAmt = Number(inv.paid_secondary || 0);
+        const secLabel = method === 'mixed_cash_vodafone' ? labels.vodafone_cash : labels.instapay;
+        if (cashAmt > 0) {
+            rowsHtml += `<div style="display:flex;justify-content:space-between;"><span>${labels.cash}</span><strong>${formatReceiptMoney(cashAmt)}</strong></div>`;
+        }
+        if (secAmt > 0) {
+            rowsHtml += `<div style="display:flex;justify-content:space-between;"><span>${secLabel}</span><strong>${formatReceiptMoney(secAmt)}</strong></div>`;
+        }
+        if (!rowsHtml) {
+            rowsHtml = `<div style="display:flex;justify-content:space-between;"><span>نقدي + إلكتروني</span><strong>${formatReceiptMoney(paid)}</strong></div>`;
+        }
+    } else {
+        const label = labels[method] || method;
+        rowsHtml = `<div style="display:flex;justify-content:space-between;"><span>${escapeReceiptHtml(label)}</span><strong>${formatReceiptMoney(paid)}</strong></div>`;
+    }
     return `
-    <div style="font-family: 'Cairo', monospace, sans-serif; direction: rtl; text-align: right; width: 72mm; margin: 0 auto; color: #000; font-size: 12px; line-height: 1.4;">
-        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 8px; margin-bottom: 8px;">
-            <div style="font-size: 18px; font-weight: 900; letter-spacing: 0.5px;">حمزة للعطور</div>
-            <div style="font-size: 12px; font-weight: bold; margin-top: 2px;">Hamza for Perfumes</div>
-            <div style="font-size: 11px; margin-top: 4px;">📍 ${activeLocationName}</div>
-            <div style="font-size: 10px; color: #444;">إيصال كاشير (نقطة بيع)</div>
+        <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #ccc;font-size:11px;">
+            <strong style="display:block;margin-bottom:4px;">طريقة الدفع:</strong>
+            ${rowsHtml}
         </div>
+    `;
+}
 
-        <div style="font-size: 10.5px; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 6px;">
-            <div><strong>رقم الإيصال:</strong> ${inv.offline_number}</div>
-            <div><strong>التاريخ:</strong> ${dateFormatted}</div>
-            ${inv.cashier_name ? `<div><strong>الكاشير:</strong> ${inv.cashier_name}</div>` : ''}
-            ${inv.packer_name ? `<div><strong>المقفل:</strong> ${inv.packer_name}</div>` : ''}
-            <div><strong>العميل:</strong> ${inv.customer_name} ${inv.customer_phone ? '(' + inv.customer_phone + ')' : ''}</div>
-            <div><strong>طريقة الدفع:</strong> ${inv.payment_method === 'cash' ? 'نقداً (كاش)' : inv.payment_method}</div>
-        </div>
+function generateReceiptHtml(inv, items) {
+    const logoSrc = getReceiptLogoDataUrl();
+    const dateFormatted = formatReceiptDateTime(inv.created_at);
+    const branchDisplay = String(activeLocationName || 'المنوات')
+        .replace('فرع 1', 'ام خنان')
+        .replace('فرع 2', 'المنوات');
+    const dueTotal = Math.max(0, Number(inv.total || 0) - Number(inv.paid_total || 0));
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
-            <thead>
-                <tr style="border-bottom: 1.5px solid #000; font-size: 11px;">
-                    <th style="text-align: right; padding-bottom: 4px;">الصنف</th>
-                    <th style="text-align: center; padding-bottom: 4px;">الكمية</th>
-                    <th style="text-align: left; padding-bottom: 4px;">الإجمالي</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${itemsRows}
-            </tbody>
-        </table>
-
-        <div style="border-top: 1.5px dashed #000; padding-top: 6px; font-size: 12px;">
-            <div style="display: flex; justify-content: space-between;">
-                <span>المجموع:</span>
-                <strong>${inv.subtotal.toFixed(2)} ج.م</strong>
+    const itemsHtml = items.map(i => {
+        const qty = Number(i.quantity || 0);
+        const unitPrice = Number(i.unit_price || 0);
+        const gross = qty * unitPrice;
+        let lineDiscount = 0;
+        if (i.discount_type === 'percent') lineDiscount = gross * (Number(i.discount_value || 0) / 100);
+        else if (i.discount_type === 'amount') lineDiscount = Number(i.discount_value || 0);
+        const lineTotal = Math.max(0, gross - lineDiscount);
+        const cleanName = escapeReceiptHtml((i.name || '') + (i.is_gift ? ' (هدية)' : ''));
+        return `
+            <div class="receipt-item">
+                <div class="item-name">${cleanName}</div>
+                <div class="item-calc">
+                    <span>${formatReceiptQty(qty)} × ${formatReceiptMoney(unitPrice)}</span>
+                    <strong>${formatReceiptMoney(lineTotal)}</strong>
+                </div>
             </div>
-            ${inv.discount_amount > 0 ? `
-            <div style="display: flex; justify-content: space-between; color: #c00;">
-                <span>الخصم:</span>
-                <strong>-${inv.discount_amount.toFixed(2)} ج.م</strong>
-            </div>` : ''}
-            <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 900; margin-top: 4px; border-top: 1px solid #000; padding-top: 4px;">
-                <span>المطلوب:</span>
-                <span>${inv.total.toFixed(2)} ج.م</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-top: 3px;">
-                <span>المدفوع:</span>
-                <strong>${inv.paid_total.toFixed(2)} ج.م</strong>
-            </div>
-            ${(inv.total - inv.paid_total) > 0 ? `
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #c00;">
-                <span>المتبقي (دين):</span>
-                <strong>${(inv.total - inv.paid_total).toFixed(2)} ج.م</strong>
-            </div>` : ''}
-            ${(inv.paid_total - inv.total) > 0 ? `
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #080;">
-                <span>الفكة للعميل:</span>
-                <strong>${(inv.paid_total - inv.total).toFixed(2)} ج.م</strong>
-            </div>` : ''}
-        </div>
+        `;
+    }).join('');
 
-        <div style="text-align: center; border-top: 2px dashed #000; margin-top: 12px; padding-top: 10px; font-size: 10.5px;">
-            <div style="font-weight: 800; font-size: 12px;">شكراً لزيارتكم حمزة للعطور ❤️</div>
-            <div>يسعدنا دائماً خدمتكم بأجود أنواع العطور</div>
+    return `<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>طباعة فاتورة ${escapeReceiptHtml(inv.offline_number)}</title>
+<style>
+  @page { margin: 0; }
+  * { box-sizing: border-box; font-family: 'Cairo', 'Noto Naskh Arabic', Tahoma, Arial, sans-serif !important; }
+  body { margin: 0; padding: 0; background: #fff; color: #000 !important; }
+  .receipt-container {
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0 auto;
+    padding: 0 1mm 35mm 2.5mm;
+    direction: rtl;
+    text-align: right;
+    color: #000 !important;
+    font-weight: 800;
+    overflow: hidden;
+  }
+  .receipt-header {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    padding-top: 2px;
+  }
+  .receipt-header h2 { font-size: 16px; margin: 0 0 2px 0; font-weight: 900; }
+  .receipt-header p { font-size: 11px; margin: 2px 0; font-weight: 800; }
+  .receipt-logo img {
+    max-width: 54px;
+    height: auto;
+    display: block;
+    filter: brightness(0);
+  }
+  .receipt-meta {
+    font-size: 11px;
+    margin-bottom: 6px;
+    line-height: 1.25;
+    display: grid;
+    gap: 3px;
+  }
+  .receipt-meta div {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1.2px solid #000;
+    padding: 2px 0;
+    font-weight: 800;
+  }
+  .receipt-divider {
+    border-top: 2px solid #000;
+    margin: 7px 0;
+  }
+  .receipt-items { font-size: 11px; }
+  .receipt-item { margin-bottom: 4px; }
+  .receipt-item .item-name { font-weight: 900; font-size: 11px; margin-bottom: 1px; text-align: right; }
+  .receipt-item .item-calc { display: flex; justify-content: space-between; font-size: 10.5px; color: #000; font-weight: 800; }
+  .receipt-summary { font-size: 11px; line-height: 1.5; font-weight: 800; }
+  .receipt-summary > div { display: flex; justify-content: space-between; padding: 2px 0; }
+  .receipt-total {
+    font-size: 14px;
+    font-weight: 900;
+    border-top: 2.5px solid #000;
+    border-bottom: 2.5px solid #000;
+    padding: 5px 0 !important;
+    margin: 5px 0;
+  }
+  .receipt-due { font-weight: 900; }
+  .receipt-barcode { text-align: center; margin: 10px 0; }
+  .receipt-barcode code { font-size: 9px; display: block; margin-top: 2px; font-weight: 800; }
+  .receipt-footer { text-align: center; font-size: 10.5px; font-weight: 800; margin-top: 12px; line-height: 1.5; color: #000; }
+  .receipt-addresses { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; border-top: 1px dashed #000; padding-top: 9px; }
+  .receipt-address-item { display: flex; align-items: flex-start; gap: 5px; font-size: 9pt; line-height: 1.55; text-align: right; direction: rtl; color: #000; font-weight: 800; }
+  .receipt-address-item .addr-icon { font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+  .receipt-print-spacer { height: 35mm; display: block; }
+</style>
+</head>
+<body>
+<div class="receipt-container">
+    <div class="receipt-header">
+        <div class="receipt-logo"><img src="${logoSrc}" alt="logo" /></div>
+        <div>
+            <h2>حمزة للعطور</h2>
+            <p>الفرع: ${escapeReceiptHtml(branchDisplay)}</p>
+            <p>التاريخ: ${escapeReceiptHtml(dateFormatted)}</p>
         </div>
     </div>
-    `;
+    <div class="receipt-meta">
+        <div><strong>رقم الفاتورة:</strong> <span>${escapeReceiptHtml(inv.offline_number)}</span></div>
+        <div><strong>الكاشير:</strong> <span>${escapeReceiptHtml(inv.cashier_name || 'كاشير')}</span></div>
+        <div><strong>العميل:</strong> <span>${escapeReceiptHtml(inv.customer_name || 'زبون عابر')}</span></div>
+        ${inv.customer_phone ? `<div><strong>الهاتف:</strong> <span>${escapeReceiptHtml(inv.customer_phone)}</span></div>` : ''}
+    </div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-items">
+        ${itemsHtml}
+    </div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-summary">
+        <div><span>إجمالي الأصناف:</span> <strong>${formatReceiptMoney(inv.subtotal)}</strong></div>
+        ${Number(inv.discount_amount || 0) > 0 ? `<div><span>الخصم:</span> <strong>${formatReceiptMoney(inv.discount_amount)}</strong></div>` : ''}
+        <div class="receipt-total"><span>المطلوب:</span> <strong>${formatReceiptMoney(inv.total)}</strong></div>
+        <div><span>المدفوع:</span> <strong>${formatReceiptMoney(inv.paid_total)}</strong></div>
+        ${dueTotal > 0.005 ? `<div class="receipt-due"><span>المتبقي (دين):</span> <strong>${formatReceiptMoney(dueTotal)}</strong></div>` : ''}
+        ${receiptPaymentRows(inv)}
+    </div>
+    <div class="receipt-divider"></div>
+    <div class="receipt-barcode"><code>${escapeReceiptHtml(inv.offline_number)}</code></div>
+    <div class="receipt-footer">
+        <p style="margin:0 0 4px;">شكراً لزيارتكم! نتشرف بلقائكم دائماً</p>
+        <div class="receipt-addresses">
+            <div class="receipt-address-item">
+                <span class="addr-icon">📍</span>
+                <span>المنوات · جيزة · شارع المدرسة الثانوية · بجوار كوبري بهجات</span>
+            </div>
+            <div class="receipt-address-item">
+                <span class="addr-icon">📍</span>
+                <span>أم خنان · جيزة · شارع الوحدة المحلية · بميدان عزت عاشور</span>
+            </div>
+        </div>
+    </div>
+    <div class="receipt-print-spacer"></div>
+</div>
+</body>
+</html>`;
 }
 
 // ===== Settings & Sync Modal =====
