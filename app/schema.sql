@@ -376,6 +376,7 @@ CREATE TABLE IF NOT EXISTS supplier_invoices (
   notes TEXT NULL,
   created_by INT NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  invoice_image VARCHAR(255) NULL,
   CONSTRAINT fk_supplier_invoice_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
   CONSTRAINT fk_supplier_invoice_user FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

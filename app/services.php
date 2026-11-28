@@ -5203,30 +5203,205 @@ function expense_rows(?int $locationId = null): array
     return $stmt->fetchAll();
 }
 
-function add_supplier(array $data, int $userId): void
+function upload_supplier_invoice_image(?array $file): ?string
 {
+    if (!$file || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+
+    $errorCode = (int) $file['error'];
+    if ($errorCode !== UPLOAD_ERR_OK) {
+        if ($errorCode === UPLOAD_ERR_INI_SIZE || $errorCode === UPLOAD_ERR_FORM_SIZE) {
+            throw new RuntimeException('حجم صورة الفاتورة أكبر من الحد المسموح.');
+        }
+        throw new RuntimeException('فشل رفع صورة الفاتورة، حاول مرة أخرى.');
+    }
+
+    if ((int) ($file['size'] ?? 0) > 10 * 1024 * 1024) {
+        throw new RuntimeException('الحد الأقصى لحجم صورة الفاتورة هو 10 ميجابايت.');
+    }
+
+    $tmp = (string) ($file['tmp_name'] ?? '');
+    if ($tmp === '' || !is_file($tmp)) {
+        throw new RuntimeException('تعذر قراءة ملف الصورة المرفوع.');
+    }
+
+    $info = @getimagesize($tmp);
+    $typeMap = [
+        IMAGETYPE_JPEG => 'jpg',
+        IMAGETYPE_PNG  => 'png',
+        IMAGETYPE_WEBP => 'webp',
+        IMAGETYPE_GIF  => 'gif',
+    ];
+    if ($info === false || !isset($typeMap[$info[2]])) {
+        throw new RuntimeException('يرجى اختيار ملف صورة صالح (JPG, PNG, WEBP, GIF).');
+    }
+
+    $dir = dirname(__DIR__) . '/uploads/supplier_invoices';
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('تعذر إنشاء مجلد حفظ صور الفواتير.');
+    }
+
+    $filename = 'sup_inv_' . date('Ymd_His') . '_' . bin2hex(random_bytes(6)) . '.' . $typeMap[$info[2]];
+    $dest = $dir . '/' . $filename;
+    if (!@move_uploaded_file($tmp, $dest)) {
+        throw new RuntimeException('تعذر حفظ صورة الفاتورة على السيرفر.');
+    }
+
+    return 'uploads/supplier_invoices/' . $filename;
+}
+
+function delete_supplier_invoice_image_file(?string $relativePath): void
+{
+    $normalized = str_replace('\\', '/', trim((string) $relativePath));
+    if ($normalized === '' || !str_starts_with($normalized, 'uploads/supplier_invoices/') || str_contains($normalized, '..')) {
+        return;
+    }
+
+    $fullPath = dirname(__DIR__) . '/' . $normalized;
+    if (is_file($fullPath)) {
+        @unlink($fullPath);
+    }
+}
+
+function add_supplier(array $data, int $userId, ?array $invoiceImageFile = null): void
+{
+    $total = (float) ($data['invoice_total'] ?? 0);
+    if ($total <= 0 && $invoiceImageFile && isset($invoiceImageFile['error']) && (int) $invoiceImageFile['error'] !== UPLOAD_ERR_NO_FILE) {
+        throw new RuntimeException('يرجى إدخال قيمة الفاتورة عند رفع صورة فاتورة.');
+    }
+
     $db = pdo();
+    $imagePath = null;
     $db->beginTransaction();
     try {
         $stmt = $db->prepare('INSERT INTO suppliers (name, phone, product_type, notes) VALUES (?, ?, ?, ?)');
         $stmt->execute([$data['name'], $data['phone'] ?: null, $data['product_type'] ?: null, $data['notes'] ?: null]);
         $supplierId = (int) $db->lastInsertId();
-        if ((float) ($data['invoice_total'] ?? 0) > 0) {
-            $total = (float) $data['invoice_total'];
-            $paid = (float) ($data['invoice_paid'] ?? 0);
-            $stmt = $db->prepare('INSERT INTO supplier_invoices (supplier_id, invoice_number, total, paid, due, invoice_date, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$supplierId, $data['invoice_number'] ?: null, $total, $paid, max(0, $total - $paid), $data['invoice_date'] ?: date('Y-m-d'), $data['notes'] ?: null, $userId]);
+        if ($total > 0) {
+            $paid = max(0.0, (float) ($data['invoice_paid'] ?? 0));
+            $imagePath = upload_supplier_invoice_image($invoiceImageFile);
+            $stmt = $db->prepare('INSERT INTO supplier_invoices (supplier_id, invoice_number, total, paid, due, invoice_date, notes, invoice_image, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$supplierId, $data['invoice_number'] ?: null, $total, $paid, max(0, $total - $paid), $data['invoice_date'] ?: date('Y-m-d'), $data['notes'] ?: null, $imagePath, $userId]);
         }
         $db->commit();
     } catch (Throwable $e) {
         $db->rollBack();
+        delete_supplier_invoice_image_file($imagePath);
         throw $e;
     }
 }
 
+function add_supplier_invoice(int $supplierId, array $data, int $userId, ?array $invoiceImageFile = null): void
+{
+    if ($supplierId <= 0) {
+        throw new RuntimeException('يرجى اختيار المورد.');
+    }
+    $total = (float) ($data['invoice_total'] ?? 0);
+    if ($total <= 0) {
+        throw new RuntimeException('يرجى إدخال قيمة فاتورة صالحة أكبر من صفر.');
+    }
+
+    $db = pdo();
+    $chk = $db->prepare('SELECT id FROM suppliers WHERE id = ?');
+    $chk->execute([$supplierId]);
+    if (!$chk->fetch()) {
+        throw new RuntimeException('المورد غير موجود.');
+    }
+
+    $paid = max(0.0, (float) ($data['invoice_paid'] ?? 0));
+    $due = max(0.0, $total - $paid);
+    $imagePath = upload_supplier_invoice_image($invoiceImageFile);
+
+    try {
+        $stmt = $db->prepare('INSERT INTO supplier_invoices (supplier_id, invoice_number, total, paid, due, invoice_date, notes, invoice_image, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([
+            $supplierId,
+            ($data['invoice_number'] ?? '') !== '' ? $data['invoice_number'] : null,
+            $total,
+            $paid,
+            $due,
+            ($data['invoice_date'] ?? '') !== '' ? $data['invoice_date'] : date('Y-m-d'),
+            ($data['notes'] ?? '') !== '' ? $data['notes'] : null,
+            $imagePath,
+            $userId,
+        ]);
+    } catch (Throwable $e) {
+        delete_supplier_invoice_image_file($imagePath);
+        throw $e;
+    }
+}
+
+function update_supplier_invoice_image(int $invoiceId, ?array $invoiceImageFile): void
+{
+    if ($invoiceId <= 0) {
+        throw new RuntimeException('معرّف الفاتورة غير صالح.');
+    }
+
+    $db = pdo();
+    $stmt = $db->prepare('SELECT id, invoice_image FROM supplier_invoices WHERE id = ?');
+    $stmt->execute([$invoiceId]);
+    $existing = $stmt->fetch();
+    if (!$existing) {
+        throw new RuntimeException('فاتورة المورد غير موجودة.');
+    }
+
+    $newPath = upload_supplier_invoice_image($invoiceImageFile);
+    if ($newPath === null) {
+        throw new RuntimeException('يرجى اختيار صورة الفاتورة من الجهاز.');
+    }
+
+    try {
+        $upd = $db->prepare('UPDATE supplier_invoices SET invoice_image = ? WHERE id = ?');
+        $upd->execute([$newPath, $invoiceId]);
+    } catch (Throwable $e) {
+        delete_supplier_invoice_image_file($newPath);
+        throw $e;
+    }
+
+    delete_supplier_invoice_image_file($existing['invoice_image'] ?? null);
+}
+
+function delete_supplier_invoice(int $invoiceId): void
+{
+    if ($invoiceId <= 0) {
+        throw new RuntimeException('معرّف الفاتورة غير صالح.');
+    }
+
+    $db = pdo();
+    $stmt = $db->prepare('SELECT id, invoice_image FROM supplier_invoices WHERE id = ?');
+    $stmt->execute([$invoiceId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        throw new RuntimeException('فاتورة المورد غير موجودة.');
+    }
+
+    $del = $db->prepare('DELETE FROM supplier_invoices WHERE id = ?');
+    $del->execute([$invoiceId]);
+
+    delete_supplier_invoice_image_file($row['invoice_image'] ?? null);
+}
+
 function supplier_rows(): array
 {
-    return pdo()->query('SELECT s.*, COALESCE(SUM(si.total), 0) AS total_invoices, COALESCE(SUM(si.due), 0) AS total_due FROM suppliers s LEFT JOIN supplier_invoices si ON si.supplier_id = s.id GROUP BY s.id ORDER BY s.created_at DESC')->fetchAll();
+    return pdo()->query('SELECT s.*, COUNT(si.id) AS invoices_count, COALESCE(SUM(si.total), 0) AS total_invoices, COALESCE(SUM(si.due), 0) AS total_due FROM suppliers s LEFT JOIN supplier_invoices si ON si.supplier_id = s.id GROUP BY s.id ORDER BY s.created_at DESC')->fetchAll();
+}
+
+function supplier_invoice_rows(?int $supplierId = null): array
+{
+    $sql = 'SELECT si.*, s.name AS supplier_name, s.phone AS supplier_phone, u.name AS created_by_name
+            FROM supplier_invoices si
+            JOIN suppliers s ON s.id = si.supplier_id
+            LEFT JOIN users u ON u.id = si.created_by';
+    $params = [];
+    if ($supplierId !== null && $supplierId > 0) {
+        $sql .= ' WHERE si.supplier_id = ?';
+        $params[] = $supplierId;
+    }
+    $sql .= ' ORDER BY si.invoice_date DESC, si.id DESC';
+    $stmt = pdo()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
 }
 
 function report_stats(array $filters = []): array

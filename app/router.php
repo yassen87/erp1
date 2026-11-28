@@ -1605,7 +1605,23 @@ function handle_post(string $route, array $user): void
         if (!has_permission('suppliers_add')) {
             throw new RuntimeException('غير مصرح لك بتسجيل موردين.');
         }
-        add_supplier($_POST, (int) $user['id']);
+        $action = post_string('action', 'add_supplier');
+        $filterSupplierId = (int) post_string('filter_supplier_id');
+        $redirectRoute = $filterSupplierId > 0 ? 'suppliers&supplier_id=' . $filterSupplierId : 'suppliers';
+        if ($action === 'add_invoice') {
+            add_supplier_invoice((int) post_string('supplier_id'), $_POST, (int) $user['id'], $_FILES['invoice_image'] ?? null);
+            flash('تم إضافة فاتورة المورد بنجاح.');
+            redirect($redirectRoute);
+        } elseif ($action === 'upload_invoice_image') {
+            update_supplier_invoice_image((int) post_string('invoice_id'), $_FILES['invoice_image'] ?? null);
+            flash('تم حفظ صورة الفاتورة بنجاح.');
+            redirect($redirectRoute);
+        } elseif ($action === 'delete_invoice') {
+            delete_supplier_invoice((int) post_string('invoice_id'));
+            flash('تم حذف فاتورة المورد بنجاح.');
+            redirect($redirectRoute);
+        }
+        add_supplier($_POST, (int) $user['id'], $_FILES['invoice_image'] ?? null);
         flash('تم تسجيل المورد.');
         redirect('suppliers');
     }
