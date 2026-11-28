@@ -253,21 +253,19 @@ function render_layout(string $route, array $user): void
 
     <main class="content">
         <header class="topbar">
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div>
+                <div class="breadcrumbs">
+                    <span><?= e(__($sectionLabel)) ?></span>
+                    <b>/</b>
+                    <strong><?= e(__($routeLabel)) ?></strong>
+                </div>
+                <h2><?= e(__($routeLabel)) ?></h2>
+            </div>
+            <div class="topbar-actions" style="display: flex; gap: 8px; align-items: center;">
                 <button type="button" class="btn-global-back" onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = 'index.php?r=dashboard'; }" title="<?= e(__('رجوع للصفحة السابقة')) ?>" aria-label="<?= e(__('رجوع')) ?>">
                     <span class="back-icon" aria-hidden="true">↩️</span>
                     <span class="back-text"><?= e(__('رجوع')) ?></span>
                 </button>
-                <div>
-                    <div class="breadcrumbs">
-                        <span><?= e(__($sectionLabel)) ?></span>
-                        <b>/</b>
-                        <strong><?= e(__($routeLabel)) ?></strong>
-                    </div>
-                    <h2><?= e(__($routeLabel)) ?></h2>
-                </div>
-            </div>
-            <div class="topbar-actions" style="display: flex; gap: 8px; align-items: center;">
                 <a class="quick-action" href="index.php?r=pos"><?= e(__('بيع جديد')) ?></a>
                 <a class="quick-action" href="index.php?r=notifications"><?= e(__('التنبيهات')) ?></a>
                 <a class="quick-action primary" href="index.php?r=reports"><?= e(__('التقارير')) ?></a>
