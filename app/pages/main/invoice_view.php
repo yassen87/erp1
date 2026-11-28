@@ -75,9 +75,44 @@ $paymentTranslations = [
     'cash' => 'كاش',
     'instapay' => 'انستا باي',
     'vodafone_cash' => 'فودافون كاش',
+    'bank_transfer' => 'تحويل بنكي',
+    'salary_deduction' => 'خصم من الراتب',
+    'customer_credit' => 'رصيد عميل',
+    'exchange_credit' => 'رصيد استبدال',
     'invoice_payment' => 'دفع فاتورة',
     'debt_payment' => 'سداد دين'
 ];
+
+$canEditPayment = has_permission('pos') || has_permission('invoices');
+$editableMethods = ['cash', 'instapay', 'vodafone_cash', 'bank_transfer'];
+$editableInvoicePayments = array_values(array_filter(
+    $payments,
+    static fn(array $p): bool => ($p['payment_type'] ?? '') === 'invoice_payment' && in_array((string) ($p['method'] ?? ''), $editableMethods, true)
+));
+$editablePaymentTotal = 0.0;
+$currentCashPart = 0.0;
+$currentSecondaryPart = 0.0;
+$currentMethodsPresent = [];
+foreach ($editableInvoicePayments as $ep) {
+    $amt = (float) $ep['amount'];
+    $m = (string) $ep['method'];
+    $editablePaymentTotal += $amt;
+    $currentMethodsPresent[$m] = ($currentMethodsPresent[$m] ?? 0.0) + $amt;
+}
+$currentSelectedMethod = 'cash';
+if (count($currentMethodsPresent) === 1) {
+    $currentSelectedMethod = (string) array_key_first($currentMethodsPresent);
+} elseif (isset($currentMethodsPresent['cash'], $currentMethodsPresent['instapay'])) {
+    $currentSelectedMethod = 'mixed_cash_instapay';
+    $currentCashPart = $currentMethodsPresent['cash'];
+    $currentSecondaryPart = $currentMethodsPresent['instapay'];
+} elseif (isset($currentMethodsPresent['cash'], $currentMethodsPresent['vodafone_cash'])) {
+    $currentSelectedMethod = 'mixed_cash_vodafone';
+    $currentCashPart = $currentMethodsPresent['cash'];
+    $currentSecondaryPart = $currentMethodsPresent['vodafone_cash'];
+} elseif (!empty($currentMethodsPresent)) {
+    $currentSelectedMethod = (string) array_key_first($currentMethodsPresent);
+}
 ?>
 <div class="screen-only">
     <section class="page-head print-hide">
@@ -156,6 +191,76 @@ $paymentTranslations = [
         </section>
         <h3>المدفوعات</h3>
         <table><thead><tr><th>الطريقة</th><th>وجهة الدفع</th><th>المبلغ</th><th>النوع</th><th>المسؤول</th><th>التاريخ</th></tr></thead><tbody><?php foreach ($payments as $p): ?><tr><td><?= e($paymentTranslations[$p['method']] ?? $p['method']) ?></td><td><?= e(payment_destination_label((string) $p['method']) ?: '-') ?></td><td><?= money($p['amount']) ?></td><td><?= e($paymentTranslations[$p['payment_type']] ?? $p['payment_type']) ?></td><td><?= e($p['user_name']) ?></td><td><?= e(format_datetime($p['created_at'])) ?></td></tr><?php endforeach; ?></tbody></table>
+
+        <?php if ($canEditPayment && $editablePaymentTotal > 0.001): ?>
+            <div class="print-hide" style="margin-top: 14px; padding: 14px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 10px;">
+                <form method="post" action="index.php?r=invoice_view&id=<?= (int) $invoice['id'] ?>" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: end; margin: 0;">
+                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="update_payment_method">
+                    <input type="hidden" name="invoice_id" value="<?= (int) $invoice['id'] ?>">
+
+                    <label style="margin: 0; font-size: 12.5px; font-weight: 700; color: var(--ink);">
+                        ✏️ تعديل طريقة الدفع (المبلغ: <?= money($editablePaymentTotal) ?>)
+                        <select name="new_payment_method" id="edit_payment_method_select" onchange="toggleEditMixedPayment()" style="margin-top: 5px; font-weight: 700;">
+                            <option value="cash" <?= $currentSelectedMethod === 'cash' ? 'selected' : '' ?>>كاش (نقداً)</option>
+                            <option value="instapay" <?= $currentSelectedMethod === 'instapay' ? 'selected' : '' ?>>إنستا باي (InstaPay)</option>
+                            <option value="vodafone_cash" <?= $currentSelectedMethod === 'vodafone_cash' ? 'selected' : '' ?>>فودافون كاش</option>
+                            <option value="bank_transfer" <?= $currentSelectedMethod === 'bank_transfer' ? 'selected' : '' ?>>تحويل بنكي</option>
+                            <option value="mixed_cash_instapay" <?= $currentSelectedMethod === 'mixed_cash_instapay' ? 'selected' : '' ?>>مختلط (كاش + إنستا باي)</option>
+                            <option value="mixed_cash_vodafone" <?= $currentSelectedMethod === 'mixed_cash_vodafone' ? 'selected' : '' ?>>مختلط (كاش + فودافون كاش)</option>
+                        </select>
+                    </label>
+
+                    <div id="edit_mixed_split_box" style="display: <?= str_starts_with($currentSelectedMethod, 'mixed_') ? 'grid' : 'none' ?>; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <label style="margin: 0; font-size: 12px; color: var(--muted);">
+                            مبلغ الكاش
+                            <input type="number" step="0.01" min="0" max="<?= e(number_format($editablePaymentTotal, 2, '.', '')) ?>" name="paid_cash" id="edit_paid_cash" value="<?= e(number_format($currentCashPart > 0 ? $currentCashPart : $editablePaymentTotal, 2, '.', '')) ?>" oninput="balanceEditMixed('cash')" style="margin-top: 4px; text-align: center; font-weight: 700;">
+                        </label>
+                        <label style="margin: 0; font-size: 12px; color: var(--muted);">
+                            <span id="edit_secondary_lbl"><?= $currentSelectedMethod === 'mixed_cash_vodafone' ? 'فودافون كاش' : 'إنستا باي' ?></span>
+                            <input type="number" step="0.01" min="0" max="<?= e(number_format($editablePaymentTotal, 2, '.', '')) ?>" name="paid_secondary" id="edit_paid_secondary" value="<?= e(number_format($currentSecondaryPart, 2, '.', '')) ?>" oninput="balanceEditMixed('secondary')" style="margin-top: 4px; text-align: center; font-weight: 700;">
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn primary" style="height: 38px; font-weight: 800;">💾 حفظ طريقة الدفع</button>
+                </form>
+            </div>
+            <script>
+                const EDITABLE_PAYMENT_TOTAL = <?= json_encode(round($editablePaymentTotal, 2)) ?>;
+                function toggleEditMixedPayment() {
+                    const sel = document.getElementById('edit_payment_method_select');
+                    const box = document.getElementById('edit_mixed_split_box');
+                    const lbl = document.getElementById('edit_secondary_lbl');
+                    const cashInp = document.getElementById('edit_paid_cash');
+                    const secInp = document.getElementById('edit_paid_secondary');
+                    if (!sel || !box) return;
+                    const isMixed = sel.value === 'mixed_cash_instapay' || sel.value === 'mixed_cash_vodafone';
+                    box.style.display = isMixed ? 'grid' : 'none';
+                    if (lbl) lbl.textContent = sel.value === 'mixed_cash_vodafone' ? 'فودافون كاش' : 'إنستا باي';
+                    if (isMixed && cashInp && secInp) {
+                        const c = parseFloat(cashInp.value) || 0;
+                        const s = parseFloat(secInp.value) || 0;
+                        if (Math.abs((c + s) - EDITABLE_PAYMENT_TOTAL) > 0.05) {
+                            cashInp.value = EDITABLE_PAYMENT_TOTAL.toFixed(2);
+                            secInp.value = '0.00';
+                        }
+                    }
+                }
+                function balanceEditMixed(changed) {
+                    const cashInp = document.getElementById('edit_paid_cash');
+                    const secInp = document.getElementById('edit_paid_secondary');
+                    if (!cashInp || !secInp) return;
+                    if (changed === 'cash') {
+                        let c = Math.min(EDITABLE_PAYMENT_TOTAL, Math.max(0, parseFloat(cashInp.value) || 0));
+                        secInp.value = (EDITABLE_PAYMENT_TOTAL - c).toFixed(2);
+                    } else {
+                        let s = Math.min(EDITABLE_PAYMENT_TOTAL, Math.max(0, parseFloat(secInp.value) || 0));
+                        cashInp.value = (EDITABLE_PAYMENT_TOTAL - s).toFixed(2);
+                    }
+                }
+            </script>
+        <?php endif; ?>
+
         <?php if ($invoice['notes']): ?><p class="invoice-note"><strong>ملاحظة:</strong> <?= e($invoice['notes']) ?></p><?php endif; ?>
     </section>
 </div>

@@ -177,7 +177,7 @@ $paymentMethods = [
                         </td>
                         <td><?= e(format_datetime($i['created_at'])) ?></td>
                         <td style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-                            <a class="btn small" href="index.php?r=invoice_view&id=<?= e($i['id']) ?>"><?= e(__('عرض/طباعة')) ?></a>
+                            <a class="btn small" href="index.php?r=invoice_view&id=<?= e($i['id']) ?>"><?= e(__('عرض / تعديل الدفع')) ?></a>
                             <?php if (has_permission('manager')): ?>
                             <form method="post" style="display:inline;" onsubmit="return confirm('⚠️ تحذير: سيتم حذف الفاتورة #<?= e($i['invoice_number']) ?> وإرجاع المخزون. هل أنت متأكد؟');">
                                 <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">

@@ -5534,6 +5534,121 @@ function invoice_payments_rows(int $invoiceId): array
     return $stmt->fetchAll();
 }
 
+/**
+ * Updates the payment method(s) on an existing invoice without altering totals, stock, or dates.
+ */
+function update_invoice_payment_method(int $invoiceId, string $newMethod, float $cashAmount, float $secondaryAmount, array $user): void
+{
+    $allowedSingle = ['cash', 'instapay', 'vodafone_cash', 'bank_transfer'];
+    $allowedMixed  = ['mixed_cash_instapay', 'mixed_cash_vodafone'];
+
+    if (!in_array($newMethod, $allowedSingle, true) && !in_array($newMethod, $allowedMixed, true)) {
+        throw new RuntimeException('طريقة الدفع المحددة غير صالحة.');
+    }
+
+    $db = pdo();
+    $stmtInv = $db->prepare('SELECT * FROM invoices WHERE id = ? LIMIT 1');
+    $stmtInv->execute([$invoiceId]);
+    $invoice = $stmtInv->fetch();
+    if (!$invoice) {
+        throw new RuntimeException('الفاتورة غير موجودة.');
+    }
+
+    require_location_access((int) $invoice['location_id']);
+
+    $stmtPay = $db->prepare("SELECT * FROM payments WHERE invoice_id = ? AND payment_type = 'invoice_payment' ORDER BY id ASC");
+    $stmtPay->execute([$invoiceId]);
+    $allPayments = $stmtPay->fetchAll();
+
+    $editableRows = array_values(array_filter(
+        $allPayments,
+        static fn(array $p): bool => in_array((string) ($p['method'] ?? ''), $allowedSingle, true)
+    ));
+
+    if (!$editableRows) {
+        throw new RuntimeException('لا توجد مدفوعات نقدية أو إلكترونية قابلة للتعديل في هذه الفاتورة.');
+    }
+
+    $editableTotal = 0.0;
+    $oldSummaryParts = [];
+    $editableIds = [];
+    foreach ($editableRows as $row) {
+        $amt = (float) $row['amount'];
+        $editableTotal += $amt;
+        $editableIds[] = (int) $row['id'];
+        $oldSummaryParts[] = ($row['method'] ?? '') . ':' . number_format($amt, 2, '.', '');
+    }
+
+    $origCreatedBy = (int) ($editableRows[0]['created_by'] ?? $user['id']);
+    $origCreatedAt = (string) ($editableRows[0]['created_at'] ?? date('Y-m-d H:i:s'));
+
+    $newRows = [];
+    if (in_array($newMethod, $allowedSingle, true)) {
+        $newRows[] = ['method' => $newMethod, 'amount' => $editableTotal];
+    } else {
+        $secondaryMethod = $newMethod === 'mixed_cash_instapay' ? 'instapay' : 'vodafone_cash';
+        $cashAmount = round(max(0.0, $cashAmount), 2);
+        $secondaryAmount = round(max(0.0, $secondaryAmount), 2);
+        if (abs(($cashAmount + $secondaryAmount) - $editableTotal) > 0.05) {
+            throw new RuntimeException('مجموع الكاش والمبلغ الإلكتروني يجب أن يساوي إجمالي المدفوع (' . number_format($editableTotal, 2) . ' ج.م).');
+        }
+        // Absorb any sub-piaster rounding difference into the non-zero component
+        $diff = round($editableTotal - ($cashAmount + $secondaryAmount), 2);
+        if (abs($diff) > 0) {
+            if ($cashAmount >= $secondaryAmount) {
+                $cashAmount = round($cashAmount + $diff, 2);
+            } else {
+                $secondaryAmount = round($secondaryAmount + $diff, 2);
+            }
+        }
+        if ($cashAmount > 0.001) {
+            $newRows[] = ['method' => 'cash', 'amount' => $cashAmount];
+        }
+        if ($secondaryAmount > 0.001) {
+            $newRows[] = ['method' => $secondaryMethod, 'amount' => $secondaryAmount];
+        }
+        if (!$newRows) {
+            throw new RuntimeException('يرجى إدخال قيمة صالحة للدفع المختلط.');
+        }
+    }
+
+    $db->beginTransaction();
+    try {
+        $placeholders = implode(',', array_fill(0, count($editableIds), '?'));
+        $db->prepare("DELETE FROM payments WHERE id IN ($placeholders)")->execute($editableIds);
+
+        $stmtIns = $db->prepare('INSERT INTO payments (invoice_id, customer_id, payment_type, method, amount, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $newSummaryParts = [];
+        foreach ($newRows as $nr) {
+            $stmtIns->execute([
+                $invoiceId,
+                $invoice['customer_id'] !== null ? (int) $invoice['customer_id'] : null,
+                'invoice_payment',
+                $nr['method'],
+                $nr['amount'],
+                $origCreatedBy,
+                $origCreatedAt,
+            ]);
+            $newSummaryParts[] = $nr['method'] . ':' . number_format((float) $nr['amount'], 2, '.', '');
+        }
+
+        log_audit(
+            (int) $user['id'],
+            'update_payment_method',
+            'invoice',
+            $invoiceId,
+            'تعديل طريقة دفع الفاتورة #' . ($invoice['invoice_number'] ?? $invoiceId) . ' من [' . implode(' + ', $oldSummaryParts) . '] إلى [' . implode(' + ', $newSummaryParts) . ']'
+        );
+
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $e;
+    }
+}
+
 function dashboard_shift_stats(?int $locationId = null): array
 {
     $db = pdo();

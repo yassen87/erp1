@@ -5,12 +5,61 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron ."
+    "dev": "electron .",
+    "build": "electron-builder --win portable nsis --x64",
+    "build:portable": "electron-builder --win portable --x64",
+    "build:setup": "electron-builder --win nsis --x64"
   },
   "author": "Hamza for Perfumes",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
-    "electron": "^29.0.0"
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.3",
+    "rcedit": "^4.0.1"
+  },
+  "build": {
+    "appId": "com.hamzaperfumes.pos",
+    "productName": "Hamza Perfumes POS",
+    "electronVersion": "29.4.6",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "src/icon.ico",
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "Hamza-Perfumes-POS-Portable.exe"
+    },
+    "nsis": {
+      "artifactName": "Hamza-Perfumes-POS-Setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "كاشير حمزة للعطور (أوفلاين)",
+      "installerIcon": "src/icon.ico",
+      "uninstallerIcon": "src/icon.ico"
+    }
   }
 }

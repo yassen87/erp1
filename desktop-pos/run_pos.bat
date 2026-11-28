@@ -8,7 +8,14 @@ echo        Hamza for Perfumes - Offline POS Desktop
 echo ==========================================================
 echo.
 
-:: 1. Check if Electron is installed in node_modules
+:: 1. Launch packaged Portable EXE if present
+if exist "dist\Hamza-Perfumes-POS-Portable.exe" (
+    echo Starting Packaged Desktop POS Application...
+    start "" "dist\Hamza-Perfumes-POS-Portable.exe"
+    exit /b
+)
+
+:: 2. Check if Electron is installed in node_modules
 if exist "node_modules\electron\dist\electron.exe" (
     echo Starting Desktop Application via Electron...
     start "" "node_modules\electron\dist\electron.exe" .

@@ -1369,6 +1369,18 @@ function handle_post(string $route, array $user): void
         redirect('shifts');
     }
 
+    if ($route === 'invoice_view' && (has_permission('pos') || has_permission('invoices'))) {
+        if (post_string('action') === 'update_payment_method') {
+            $invoiceId = (int) post_string('invoice_id');
+            $newMethod = trim((string) post_string('new_payment_method'));
+            $cashAmount = (float) post_string('paid_cash', '0');
+            $secondaryAmount = (float) post_string('paid_secondary', '0');
+            update_invoice_payment_method($invoiceId, $newMethod, $cashAmount, $secondaryAmount, $user);
+            flash('تم تعديل طريقة دفع الفاتورة بنجاح.');
+            redirect('invoice_view&id=' . $invoiceId);
+        }
+    }
+
     if ($route === 'invoices' && has_permission('invoices_notes')) {
         if (post_string('action') === 'update_notes') {
             $invoiceId = (int) post_string('invoice_id');
